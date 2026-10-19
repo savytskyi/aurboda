@@ -162,6 +162,37 @@ export interface UpsertActivityResult {
 export const upsertActivity = async (user: string, activity: Activity): Promise<UpsertActivityResult> => {
   let writtenId: string | undefined
   if (activity.external_id) {
+    // Claim one matching legacy sourced row that predates external-id support.
+    // This makes the first sync after an importer upgrade idempotent too,
+    // instead of retaining both the old timestamp-keyed row and the new row.
+    await query(
+      user,
+      `UPDATE activities
+          SET external_id = $2
+        WHERE id = (
+          SELECT id FROM activities
+           WHERE source = $1
+             AND external_id IS NULL
+             AND activity_type = $3
+             AND start_time = $4
+             AND end_time IS NOT DISTINCT FROM $5
+             AND deleted_at IS NULL
+           ORDER BY id
+           LIMIT 1
+        )
+          AND NOT EXISTS (
+            SELECT 1 FROM activities
+             WHERE source = $1 AND external_id = $2
+          )`,
+      [
+        activity.source,
+        activity.external_id,
+        activity.activity_type,
+        activity.start_time,
+        activity.end_time ?? null,
+      ],
+    )
+
     // Upsert by external_id (for sourced data like calendar events, Oura tags, lastfm)
     const result = await query(
       user,

@@ -256,6 +256,8 @@ const main = async () => {
 
   const oura = ouraClient(getOuraCredentials, apiBaseUrl, {
     onUserAuthenticated: (ouraUserId, username) => centralDb.upsertOuraUserMapping(ouraUserId, username),
+    redirectUri: process.env.OURA_REDIRECT_URI,
+    scopes: process.env.OURA_OAUTH_SCOPES ?? 'personal daily session tag',
   })
 
   // No server-side credentials: the client uses per-user session tokens.

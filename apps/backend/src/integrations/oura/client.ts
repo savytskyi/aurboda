@@ -1,7 +1,8 @@
 import type { Request, Response } from 'express'
 
 import axios from 'axios'
-import { addDays, addSeconds, formatISO, isAfter, isBefore, isFuture } from 'date-fns'
+import { addDays, addSeconds, formatISO, isAfter, isBefore, isFuture, min, startOfDay } from 'date-fns'
+import { createHash, randomBytes } from 'node:crypto'
 
 import {
   deleteOAuthToken,
@@ -59,8 +60,31 @@ export type OuraSleepPeriodRaw = {
   day: string
 }
 
+export type OuraWorkoutRaw = {
+  id: string
+  activity: string
+  calories: number | null
+  day: string
+  distance: number | null
+  end_datetime: string
+  intensity?: string
+  label?: string | null
+  source?: string
+  start_datetime: string
+}
+
+export type OuraHeartRateRaw = {
+  bpm: number
+  source?: string
+  timestamp: string
+}
+
 export interface OuraClientOptions {
   onUserAuthenticated?: (ouraUserId: string, username: string) => Promise<void>
+  /** Override the OAuth callback independently from the public API base URL. */
+  redirectUri?: string
+  /** Space-delimited Oura OAuth scopes requested during authorization. */
+  scopes?: string
 }
 
 export type OuraCredentialGetter = () => Promise<{ clientId: string; clientSecret: string }>
@@ -70,15 +94,72 @@ export const ouraClient = (
   apiBaseUrl: string,
   options?: OuraClientOptions,
 ) => {
-  const redirectUri = `${apiBaseUrl}/auth/ouracb`
+  const redirectUri = options?.redirectUri ?? `${apiBaseUrl}/auth/ouracb`
+  const pendingAuthorizations = new Map<string, { codeVerifier: string; createdAt: number; user: string }>()
 
-  const getGeneric = async (type: string, start: Date, end: Date, token: string) => {
-    const response = await axios.get(
-      `https://api.ouraring.com/v2/usercollection/${type}?start_date=${formatISO(start, { representation: 'date' })}&end_date=${formatISO(addDays(end, 1), { representation: 'date' })}`,
-      { headers: { Authorization: `Bearer ${token}` } },
-    )
-    return response.data.data
+  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+  const requestPage = async <T>(
+    type: string,
+    params: Record<string, string>,
+    token: string,
+  ): Promise<{ data?: T[]; next_token?: string | null }> => {
+    const backoffMs = [1_000, 2_000, 5_000, 10_000]
+    for (let attempt = 0; ; attempt++) {
+      try {
+        const response = await axios.get(`https://api.ouraring.com/v2/usercollection/${type}`, {
+          headers: { Authorization: `Bearer ${token}` },
+          params,
+        })
+        return response.data
+      } catch (error) {
+        const response = (error as { response?: { status?: number; headers?: Record<string, string> } })
+          .response
+        const retryable = !response || response.status === 429 || (response.status ?? 0) >= 500
+        if (!retryable || attempt >= backoffMs.length) throw error
+        const retryAfterSeconds = Number(response?.headers?.['retry-after'])
+        const delay = Number.isFinite(retryAfterSeconds)
+          ? Math.min(retryAfterSeconds * 1_000, 60_000)
+          : backoffMs[attempt]
+        await sleep(delay)
+      }
+    }
   }
+
+  /** Fetch every page from an Oura v2 collection endpoint. */
+  const getCollection = async <T>(
+    type: string,
+    params: Record<string, string>,
+    token: string,
+  ): Promise<T[]> => {
+    const records: T[] = []
+    let nextToken: string | undefined
+    do {
+      const page = await requestPage<T>(
+        type,
+        nextToken ? { ...params, next_token: nextToken } : params,
+        token,
+      )
+      records.push(...(page.data ?? []))
+      nextToken = page.next_token ?? undefined
+    } while (nextToken)
+    return records
+  }
+
+  const getGeneric = async <T = Record<string, unknown>>(
+    type: string,
+    start: Date,
+    end: Date,
+    token: string,
+  ): Promise<T[]> =>
+    getCollection<T>(
+      type,
+      {
+        end_date: formatISO(addDays(end, 1), { representation: 'date' }),
+        start_date: formatISO(start, { representation: 'date' }),
+      },
+      token,
+    )
 
   const getPersonalInfo = async (accessToken: string): Promise<{ id: string } | null> => {
     try {
@@ -110,20 +191,30 @@ export const ouraClient = (
         return res.end('{"success":false,"error":"Oura not configured"}')
       }
 
-      const user = state as string
+      const pending = state ? pendingAuthorizations.get(state) : undefined
+      if (!pending || Date.now() - pending.createdAt > 15 * 60 * 1000) {
+        if (state) pendingAuthorizations.delete(state)
+        res.statusCode = 400
+        return res.end('{"success":false,"error":"Invalid or expired OAuth state"}')
+      }
+      pendingAuthorizations.delete(state!)
+      const user = pending.user
 
       if (!(await schemaInitialized(user))) {
         await initializeSchema(user)
       }
 
-      const tokenUrl = new URL('https://cloud.ouraring.com/oauth/token')
-      tokenUrl.searchParams.append('grant_type', 'authorization_code')
-      tokenUrl.searchParams.append('client_id', clientId)
-      tokenUrl.searchParams.append('client_secret', clientSecret)
-      tokenUrl.searchParams.append('code', code as string)
-      tokenUrl.searchParams.append('redirect_uri', redirectUri)
+      const tokenParams = new URLSearchParams()
+      tokenParams.append('grant_type', 'authorization_code')
+      tokenParams.append('client_id', clientId)
+      tokenParams.append('client_secret', clientSecret)
+      tokenParams.append('code', code as string)
+      tokenParams.append('redirect_uri', redirectUri)
+      tokenParams.append('code_verifier', pending.codeVerifier)
 
-      const response = await axios.post(tokenUrl.toString())
+      const response = await axios.post('https://api.ouraring.com/oauth/token', tokenParams, {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      })
 
       const { access_token, refresh_token, expires_in } = response.data
 
@@ -177,13 +268,15 @@ export const ouraClient = (
       }
 
       const { clientId, clientSecret } = await getCredentials()
-      const tokenUrl = new URL('https://cloud.ouraring.com/oauth/token')
-      tokenUrl.searchParams.append('grant_type', 'refresh_token')
-      tokenUrl.searchParams.append('refresh_token', token.refresh_token!)
-      tokenUrl.searchParams.append('client_id', clientId)
-      tokenUrl.searchParams.append('client_secret', clientSecret)
+      const tokenParams = new URLSearchParams()
+      tokenParams.append('grant_type', 'refresh_token')
+      tokenParams.append('refresh_token', token.refresh_token!)
+      tokenParams.append('client_id', clientId)
+      tokenParams.append('client_secret', clientSecret)
 
-      const response = await axios.post(tokenUrl.toString())
+      const response = await axios.post('https://api.ouraring.com/oauth/token', tokenParams, {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      })
       const { access_token, refresh_token, expires_in } = response.data
 
       await upsertOAuthToken(user, {
@@ -197,25 +290,63 @@ export const ouraClient = (
     },
 
     async getDailyCardiovascularAge(start: Date, end: Date, token: string) {
-      return (await getGeneric('daily_cardiovascular_age', start, end, token)).filter(
+      return (await getGeneric<{ timestamp: string }>('daily_cardiovascular_age', start, end, token)).filter(
         ({ timestamp }: { timestamp: string }) => isBefore(timestamp, end) && isAfter(timestamp, start),
       )
     },
 
+    async getDailyActivity(start: Date, end: Date, token: string) {
+      return getGeneric<Record<string, unknown>>('daily_activity', start, end, token)
+    },
+
+    async getDailyStress(start: Date, end: Date, token: string) {
+      return getGeneric<Record<string, unknown>>('daily_stress', start, end, token)
+    },
+
+    async getDailySpo2(start: Date, end: Date, token: string) {
+      return getGeneric<Record<string, unknown>>('daily_spo2', start, end, token)
+    },
+
+    async getWorkouts(start: Date, end: Date, token: string): Promise<OuraWorkoutRaw[]> {
+      return getGeneric<OuraWorkoutRaw>('workout', start, end, token)
+    },
+
+    async getHeartRate(start: Date, end: Date, token: string): Promise<OuraHeartRateRaw[]> {
+      // One-day datetime windows keep high-frequency retries bounded; getCollection
+      // follows every next_token page within each window.
+      const samples: OuraHeartRateRaw[] = []
+      let windowStart = start
+      while (isBefore(windowStart, end)) {
+        const windowEnd = min([addDays(startOfDay(windowStart), 1), end])
+        const records = await getCollection<OuraHeartRateRaw>(
+          'heartrate',
+          { end_datetime: windowEnd.toISOString(), start_datetime: windowStart.toISOString() },
+          token,
+        )
+        samples.push(...records)
+        windowStart = windowEnd
+      }
+      return samples
+    },
+
+    async getRingConfiguration(_start: Date, _end: Date, token: string) {
+      return getCollection<Record<string, unknown>>('ring_configuration', {}, token)
+    },
+
     async getDailyReadiness(start: Date, end: Date, token: string) {
-      return (await getGeneric('daily_readiness', start, end, token)).filter(
+      return (await getGeneric<{ timestamp: string }>('daily_readiness', start, end, token)).filter(
         ({ timestamp }: { timestamp: string }) => isBefore(timestamp, end) && isAfter(timestamp, start),
       )
     },
 
     async getDailyResilience(start: Date, end: Date, token: string) {
-      return (await getGeneric('daily_resilience', start, end, token)).filter(
+      return (await getGeneric<{ timestamp: string }>('daily_resilience', start, end, token)).filter(
         ({ timestamp }: { timestamp: string }) => isBefore(timestamp, end) && isAfter(timestamp, start),
       )
     },
 
     async getDailySleep(start: Date, end: Date, token: string) {
-      return (await getGeneric('daily_sleep', start, end, token)).filter(
+      return (await getGeneric<{ timestamp: string }>('daily_sleep', start, end, token)).filter(
         ({ timestamp }: { timestamp: string }) => isBefore(timestamp, end) && isAfter(timestamp, start),
       )
     },
@@ -230,7 +361,7 @@ export const ouraClient = (
       // heart_rate_variability: {    interval: 5,    items: [
       // mood: 'good',
       // motion_count: {    interval: 5,    items: [
-      const sessions = ((await getGeneric('session', start, end, token)) as OuraSession[])
+      const sessions = (await getGeneric<OuraSession>('session', start, end, token))
         .map((session) => ({
           endTime: new Date(session.end_datetime),
           heartRate: session.heart_rate,
@@ -247,7 +378,7 @@ export const ouraClient = (
     },
 
     async getSleep(start: Date, end: Date, token: string): Promise<OuraSleepPeriodRaw[]> {
-      const data = (await getGeneric('sleep', start, end, token)) as OuraSleepPeriodRaw[]
+      const data = await getGeneric<OuraSleepPeriodRaw>('sleep', start, end, token)
       return data.filter(
         ({ bedtime_start, bedtime_end }) => isBefore(bedtime_start, end) && isAfter(bedtime_end, start),
       )
@@ -258,7 +389,7 @@ export const ouraClient = (
       token: string,
       tagMappings?: Record<string, string>,
     ): Promise<OuraTagWithComment[]> {
-      const data: OuraTag[] = await getGeneric('enhanced_tag', start, end, token)
+      const data = await getGeneric<OuraTag>('enhanced_tag', start, end, token)
       const tags = data
         .map(
           (tag): OuraTagWithComment => ({
@@ -297,10 +428,20 @@ export const ouraClient = (
       }
 
       const location = new URL('https://cloud.ouraring.com/oauth/authorize')
+      for (const [key, pending] of pendingAuthorizations) {
+        if (Date.now() - pending.createdAt > 15 * 60 * 1000) pendingAuthorizations.delete(key)
+      }
+      const state = randomBytes(24).toString('base64url')
+      const codeVerifier = randomBytes(48).toString('base64url')
+      const codeChallenge = createHash('sha256').update(codeVerifier).digest('base64url')
+      pendingAuthorizations.set(state, { codeVerifier, createdAt: Date.now(), user })
       location.searchParams.append('response_type', 'code')
       location.searchParams.append('client_id', clientId)
       location.searchParams.append('redirect_uri', redirectUri)
-      location.searchParams.append('state', user)
+      if (options?.scopes) location.searchParams.append('scope', options.scopes)
+      location.searchParams.append('state', state)
+      location.searchParams.append('code_challenge', codeChallenge)
+      location.searchParams.append('code_challenge_method', 'S256')
       res.json({ success: true, url: location.toString() })
     },
   }

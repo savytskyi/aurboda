@@ -210,13 +210,19 @@ export type SyncResultStatus = z.infer<typeof syncResultStatusSchema>
 
 export const ouraDataTypeSchema = z
   .enum([
+    'dailyActivity',
     'dailyCardiovascularAge',
     'dailyReadiness',
     'dailyResilience',
     'dailySleep',
+    'dailySpo2',
+    'dailyStress',
+    'heartRate',
+    'ringConfiguration',
     'sessions',
     'sleep',
     'tags',
+    'workouts',
   ])
   .meta({
     description: 'Oura data type',

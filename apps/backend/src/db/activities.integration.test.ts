@@ -102,6 +102,39 @@ describe('Activities Integration Tests', () => {
       expect(activities[0].end_time).toEqual(new Date('2024-01-16T07:00:00Z'))
     })
 
+    test('claims a matching legacy sourced row when external ids are introduced', async () => {
+      const user = getTestUser()
+      const start = new Date('2024-01-17T23:00:00Z')
+      const end = new Date('2024-01-18T07:00:00Z')
+
+      const legacyId = await insertActivity(user, {
+        activity_type: 'sleep',
+        end_time: end,
+        source: 'oura',
+        start_time: start,
+        title: 'Legacy sleep',
+      })
+      const upgradedId = await insertActivity(user, {
+        activity_type: 'sleep',
+        end_time: end,
+        external_id: 'oura-sleep-2024-01-17',
+        source: 'oura',
+        start_time: start,
+        title: 'Sleep with external id',
+      })
+
+      const activities = await getActivities(
+        user,
+        'sleep',
+        new Date('2024-01-17T00:00:00Z'),
+        new Date('2024-01-18T23:59:59Z'),
+      )
+      expect(upgradedId).toBe(legacyId)
+      expect(activities).toHaveLength(1)
+      expect(activities[0].external_id).toBe('oura-sleep-2024-01-17')
+      expect(activities[0].title).toBe('Sleep with external id')
+    })
+
     test('merges data on upsert, preserving existing keys like detail_synced', async () => {
       const user = getTestUser()
 

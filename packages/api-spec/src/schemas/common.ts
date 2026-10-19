@@ -63,6 +63,28 @@ export const validMetrics = [
   'vertical_speed',
   'grade_adjusted_speed',
   'performance_condition',
+  'activity_score',
+  'activity_target_calories',
+  'activity_target_meters',
+  'activity_calories_active',
+  'activity_calories_total',
+  'average_met_minutes',
+  'equivalent_walking_distance',
+  'high_activity_met_minutes',
+  'high_activity_time_sec',
+  'low_activity_met_minutes',
+  'low_activity_time_sec',
+  'medium_activity_met_minutes',
+  'medium_activity_time_sec',
+  'inactivity_alerts',
+  'meters_to_target',
+  'non_wear_time_sec',
+  'resting_time_sec',
+  'sedentary_met_minutes',
+  'sedentary_time_sec',
+  'stress_high_sec',
+  'recovery_high_sec',
+  'breathing_disturbance_index',
 ] as const
 
 export const metricTypeSchema = z.enum(validMetrics).meta({
@@ -253,6 +275,28 @@ export const metricUnits: Record<MetricType, string> = {
   vertical_speed: 'm/s',
   grade_adjusted_speed: 'm/s',
   performance_condition: 'score',
+  activity_score: 'score',
+  activity_target_calories: 'kcal',
+  activity_target_meters: 'm',
+  activity_calories_active: 'kcal',
+  activity_calories_total: 'kcal',
+  average_met_minutes: 'MET-min',
+  equivalent_walking_distance: 'm',
+  high_activity_met_minutes: 'MET-min',
+  high_activity_time_sec: 'sec',
+  low_activity_met_minutes: 'MET-min',
+  low_activity_time_sec: 'sec',
+  medium_activity_met_minutes: 'MET-min',
+  medium_activity_time_sec: 'sec',
+  inactivity_alerts: 'count',
+  meters_to_target: 'm',
+  non_wear_time_sec: 'sec',
+  resting_time_sec: 'sec',
+  sedentary_met_minutes: 'MET-min',
+  sedentary_time_sec: 'sec',
+  stress_high_sec: 'sec',
+  recovery_high_sec: 'sec',
+  breathing_disturbance_index: 'index',
 }
 
 export const metricAggregationSchema = z.enum(['avg', 'sum']).meta({
@@ -388,6 +432,8 @@ export const sumMetrics: MetricType[] = [
   'calories_active',
   'calories_total',
   'calories_basal',
+  'activity_calories_active',
+  'activity_calories_total',
   'hr_zone_0_sec',
   'hr_zone_1_sec',
   'hr_zone_2_sec',
@@ -422,8 +468,9 @@ export const cumulativeMetrics: MetricType[] = [
  * Trusted sources for cumulative metrics.
  * health_connect_aggregate: deduplicated daily totals from Health Connect
  * aurboda: computed values (e.g., calorie calculation from HR data)
+ * oura: direct daily aggregate totals from Oura
  */
-export const cumulativeSources: DataSource[] = ['health_connect_aggregate', 'aurboda']
+export const cumulativeSources: DataSource[] = ['health_connect_aggregate', 'aurboda', 'oura']
 
 /**
  * Metrics where aurboda-computed per-minute data is authoritative — daily

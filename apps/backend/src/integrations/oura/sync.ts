@@ -86,6 +86,9 @@ export const syncOuraDataType = async (
     let data: unknown[]
 
     switch (dataType) {
+      case 'dailyActivity':
+        data = await oura.getDailyActivity(start, end, accessToken)
+        break
       case 'dailyCardiovascularAge':
         data = await oura.getDailyCardiovascularAge(start, end, accessToken)
         break
@@ -98,6 +101,18 @@ export const syncOuraDataType = async (
       case 'dailySleep':
         data = await oura.getDailySleep(start, end, accessToken)
         break
+      case 'dailySpo2':
+        data = await oura.getDailySpo2(start, end, accessToken)
+        break
+      case 'dailyStress':
+        data = await oura.getDailyStress(start, end, accessToken)
+        break
+      case 'heartRate':
+        data = await oura.getHeartRate(start, end, accessToken)
+        break
+      case 'ringConfiguration':
+        data = await oura.getRingConfiguration(start, end, accessToken)
+        break
       case 'sessions':
         data = await oura.getSessions(start, end, accessToken)
         break
@@ -109,11 +124,15 @@ export const syncOuraDataType = async (
         data = await oura.getTags(start, end, accessToken, settings?.tag_mappings)
         break
       }
+      case 'workouts':
+        data = await oura.getWorkouts(start, end, accessToken)
+        break
     }
 
     await processOuraData(user, dataType, data)
 
-    if ((dataType === 'sleep' || dataType === 'sessions') && data.length > 0) {
+    // Trigger calorie computation for data types that include HR samples
+    if ((dataType === 'sleep' || dataType === 'sessions' || dataType === 'heartRate') && data.length > 0) {
       await triggerCalorieComputation(user, start, end)
     }
 
@@ -175,13 +194,19 @@ export const syncAllOuraData = async (
 ): Promise<SyncResult[]> => {
   const accessToken = await oura.getAccessToken(user)
   const dataTypes: OuraDataType[] = [
+    'dailyActivity',
     'dailyCardiovascularAge',
     'dailyReadiness',
     'dailyResilience',
     'dailySleep',
+    'dailySpo2',
+    'dailyStress',
     'sessions',
     'sleep',
+    'heartRate',
+    'workouts',
     'tags',
+    'ringConfiguration',
   ]
 
   const results: SyncResult[] = []

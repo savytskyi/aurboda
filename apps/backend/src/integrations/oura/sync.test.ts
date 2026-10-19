@@ -243,7 +243,7 @@ describe('processOuraData', () => {
         {
           metric: 'cardiovascular_age',
           source: 'oura',
-          time: new Date('2025-01-02'),
+          time: new Date('2025-01-02T11:00:00Z'),
           value: 34,
         },
       ])
@@ -488,6 +488,7 @@ describe('processOuraData', () => {
           sessionType: 'meditation',
         },
         end_time: new Date('2025-01-01T10:30:00Z'),
+        external_id: 'sess-1',
         source: 'oura',
         start_time: new Date('2025-01-01T10:00:00Z'),
         title: 'meditation',
@@ -646,6 +647,7 @@ describe('processOuraData', () => {
           ]),
         }),
         end_time: new Date('2025-01-16T07:00:00Z'),
+        external_id: 'sleep-1',
         source: 'oura',
         start_time: new Date('2025-01-15T23:00:00Z'),
         title: 'Sleep',
@@ -757,10 +759,23 @@ describe('processOuraData', () => {
       )
     })
 
-    test('does not call insertTimeSeries when no HR/HRV data', async () => {
+    test('stores nightly summary metrics when interval HR/HRV data is absent', async () => {
       await processOuraData(user, 'sleep', [makeSleepRecord()])
 
-      expect(db.insertTimeSeries).not.toHaveBeenCalled()
+      expect(db.insertTimeSeries).toHaveBeenCalledWith(user, [
+        {
+          metric: 'resting_heart_rate',
+          source: 'oura',
+          time: new Date('2025-01-16T07:00:00Z'),
+          value: 48,
+        },
+        {
+          metric: 'hrv_sleep',
+          source: 'oura',
+          time: new Date('2025-01-16T07:00:00Z'),
+          value: 45,
+        },
+      ])
     })
   })
 
