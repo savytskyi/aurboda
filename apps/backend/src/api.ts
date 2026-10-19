@@ -171,6 +171,8 @@ const main = async () => {
 
   const oura = ouraClient(getOuraCredentials, apiBaseUrl, {
     onUserAuthenticated: (ouraUserId, username) => centralDb.upsertOuraUserMapping(ouraUserId, username),
+    redirectUri: process.env.OURA_REDIRECT_URI,
+    scopes: process.env.OURA_OAUTH_SCOPES ?? 'personal daily session tag',
   })
 
   // Create Garmin client (no server-side credentials needed - uses per-user session tokens)
