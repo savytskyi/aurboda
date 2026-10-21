@@ -46,7 +46,7 @@ export interface SyncResult {
   retry_after?: Date
 }
 
-/* eslint-disable complexity -- switch over 7 Oura data types + error handling is inherently branchy */
+/* eslint-disable complexity -- switch over every Oura data type + error handling is inherently branchy */
 export const syncOuraDataType = async (
   user: string,
   oura: ReturnType<typeof ouraClient>,
@@ -110,6 +110,15 @@ export const syncOuraDataType = async (
       case 'heartRate':
         data = await oura.getHeartRate(start, end, accessToken)
         break
+      case 'personalInfo':
+        data = await oura.getPersonalInfo(start, end, accessToken)
+        break
+      case 'restModePeriods':
+        data = await oura.getRestModePeriods(start, end, accessToken)
+        break
+      case 'ringBatteryLevel':
+        data = await oura.getRingBatteryLevel(start, end, accessToken)
+        break
       case 'ringConfiguration':
         data = await oura.getRingConfiguration(start, end, accessToken)
         break
@@ -119,11 +128,17 @@ export const syncOuraDataType = async (
       case 'sleep':
         data = await oura.getSleep(start, end, accessToken)
         break
+      case 'sleepTime':
+        data = await oura.getSleepTime(start, end, accessToken)
+        break
       case 'tags': {
         const settings = await getUserSettings(user)
         data = await oura.getTags(start, end, accessToken, settings?.tag_mappings)
         break
       }
+      case 'vo2Max':
+        data = await oura.getVo2Max(start, end, accessToken)
+        break
       case 'workouts':
         data = await oura.getWorkouts(start, end, accessToken)
         break
@@ -203,10 +218,15 @@ export const syncAllOuraData = async (
     'dailyStress',
     'sessions',
     'sleep',
+    'sleepTime',
     'heartRate',
     'workouts',
     'tags',
+    'vo2Max',
+    'restModePeriods',
+    'ringBatteryLevel',
     'ringConfiguration',
+    'personalInfo',
   ]
 
   const results: SyncResult[] = []

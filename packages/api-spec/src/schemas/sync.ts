@@ -218,10 +218,15 @@ export const ouraDataTypeSchema = z
     'dailySpo2',
     'dailyStress',
     'heartRate',
+    'personalInfo',
+    'restModePeriods',
+    'ringBatteryLevel',
     'ringConfiguration',
     'sessions',
     'sleep',
+    'sleepTime',
     'tags',
+    'vo2Max',
     'workouts',
   ])
   .meta({

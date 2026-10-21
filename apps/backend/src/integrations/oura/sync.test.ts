@@ -278,27 +278,35 @@ describe('processOuraData', () => {
           time: new Date('2025-01-01T06:00:00Z'),
           value: 85,
         },
+        {
+          metric: 'readiness_activity_balance',
+          source: 'oura',
+          time: new Date('2025-01-01T06:00:00Z'),
+          value: 90,
+        },
       ])
     })
   })
 
   describe('dailyResilience', () => {
-    test('processes resilience level data', async () => {
+    test('processes resilience level data in Oura order (limited < adequate < solid < strong < exceptional)', async () => {
       const data = [
         { id: 'rs-1', level: 'solid', timestamp: '2025-01-01T00:00:00Z' },
         { id: 'rs-2', level: 'exceptional', timestamp: '2025-01-02T00:00:00Z' },
         { id: 'rs-3', level: 'limited', timestamp: '2025-01-03T00:00:00Z' },
         { id: 'rs-4', level: 'strong', timestamp: '2025-01-04T00:00:00Z' },
+        { id: 'rs-5', level: 'adequate', timestamp: '2025-01-05T00:00:00Z' },
       ]
 
       await processOuraData(user, 'dailyResilience', data)
 
-      expect(db.insertRawRecord).toHaveBeenCalledTimes(4)
+      expect(db.insertRawRecord).toHaveBeenCalledTimes(5)
       expect(db.insertTimeSeries).toHaveBeenCalledWith(user, [
-        { metric: 'resilience_score', source: 'oura', time: new Date('2025-01-01T00:00:00Z'), value: 75 },
+        { metric: 'resilience_score', source: 'oura', time: new Date('2025-01-01T00:00:00Z'), value: 60 },
         { metric: 'resilience_score', source: 'oura', time: new Date('2025-01-02T00:00:00Z'), value: 100 },
-        { metric: 'resilience_score', source: 'oura', time: new Date('2025-01-03T00:00:00Z'), value: 25 },
-        { metric: 'resilience_score', source: 'oura', time: new Date('2025-01-04T00:00:00Z'), value: 50 },
+        { metric: 'resilience_score', source: 'oura', time: new Date('2025-01-03T00:00:00Z'), value: 20 },
+        { metric: 'resilience_score', source: 'oura', time: new Date('2025-01-04T00:00:00Z'), value: 80 },
+        { metric: 'resilience_score', source: 'oura', time: new Date('2025-01-05T00:00:00Z'), value: 40 },
       ])
     })
 
@@ -774,6 +782,12 @@ describe('processOuraData', () => {
           source: 'oura',
           time: new Date('2025-01-16T07:00:00Z'),
           value: 45,
+        },
+        {
+          metric: 'sleep_average_heart_rate',
+          source: 'oura',
+          time: new Date('2025-01-16T07:00:00Z'),
+          value: 55,
         },
       ])
     })

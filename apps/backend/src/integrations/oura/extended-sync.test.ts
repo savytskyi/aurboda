@@ -166,4 +166,137 @@ describe('extended Oura processors', () => {
       expect.objectContaining({ external_id: 'ring-1', record_type: 'ring_configuration' }),
     )
   })
+
+  test('stores sleep HRV from the `hrv` sample field at the sample timestamp, plus nightly totals', async () => {
+    await processOuraData('ky_home', 'sleep', [
+      {
+        average_breath: 14.5,
+        average_heart_rate: 55.2,
+        average_hrv: 42,
+        awake_time: 1_800,
+        bedtime_end: '2026-10-19T07:00:00+02:00',
+        bedtime_start: '2026-10-18T23:00:00+02:00',
+        day: '2026-10-19',
+        deep_sleep_duration: 4_200,
+        efficiency: 88,
+        heart_rate: null,
+        hrv: { interval: 300, items: [null, 40, 44], timestamp: '2026-10-18T23:05:00+02:00' },
+        id: 'sleep-1',
+        latency: 600,
+        light_sleep_duration: 13_000,
+        lowest_heart_rate: 48,
+        readiness_score_delta: null,
+        rem_sleep_duration: 6_000,
+        restless_periods: 120,
+        sleep_phase_5_min: null,
+        time_in_bed: 28_800,
+        total_sleep_duration: 23_200,
+        type: 'long_sleep',
+      },
+    ])
+
+    const points = vi.mocked(db.insertTimeSeries).mock.calls.flatMap(([, p]) => p)
+    const hrv = points.filter((point) => point.metric === 'hrv_rmssd')
+    expect(hrv.map((point) => [point.time.toISOString(), point.value])).toEqual([
+      ['2026-10-18T21:10:00.000Z', 40],
+      ['2026-10-18T21:15:00.000Z', 44],
+    ])
+    expect(metricValues()).toEqual(
+      expect.arrayContaining([
+        ['sleep_duration_sec', 23_200],
+        ['sleep_deep_sec', 4_200],
+        ['sleep_rem_sec', 6_000],
+        ['sleep_light_sec', 13_000],
+        ['sleep_awake_sec', 1_800],
+        ['time_in_bed_sec', 28_800],
+        ['sleep_efficiency_percent', 88],
+        ['sleep_latency_sec', 600],
+        ['respiratory_rate', 14.5],
+        ['sleep_average_heart_rate', 55.2],
+        ['sleep_restless_periods', 120],
+      ]),
+    )
+  })
+
+  test('persists day-only resilience, cardiovascular age, readiness detail, VO2 max and stress summary', async () => {
+    await processOuraData('ky_home', 'dailyResilience', [
+      {
+        contributors: { daytime_recovery: 30.5, sleep_recovery: 70.1, stress: 45 },
+        day: '2026-10-18',
+        id: 'res-1',
+        level: 'adequate',
+      },
+    ])
+    await processOuraData('ky_home', 'dailyCardiovascularAge', [
+      { day: '2026-10-18', id: 'cva-1', pulse_wave_velocity: 6.8, vascular_age: 33 },
+    ])
+    await processOuraData('ky_home', 'dailyReadiness', [
+      {
+        contributors: { hrv_balance: 77, sleep_regularity: null },
+        day: '2026-10-18',
+        id: 'ready-1',
+        score: 81,
+        temperature_deviation: -0.12,
+        temperature_trend_deviation: 0.05,
+        timestamp: '2026-10-18T00:00:00+02:00',
+      },
+    ])
+    await processOuraData('ky_home', 'vo2Max', [{ day: '2026-10-18', id: 'vo2-1', vo2_max: 44 }])
+    await processOuraData('ky_home', 'dailyStress', [
+      { day: '2026-10-18', day_summary: 'stressful', id: 'stress-2', recovery_high: 0, stress_high: 9_000 },
+    ])
+
+    const values = metricValues()
+    expect(values).toEqual(
+      expect.arrayContaining([
+        ['resilience_score', 40],
+        ['resilience_sleep_recovery', 70.1],
+        ['resilience_daytime_recovery', 30.5],
+        ['resilience_stress', 45],
+        ['cardiovascular_age', 33],
+        ['pulse_wave_velocity', 6.8],
+        ['readiness_score', 81],
+        ['readiness_hrv_balance', 77],
+        ['temperature_deviation', -0.12],
+        ['temperature_trend_deviation', 0.05],
+        ['vo2_max', 44],
+        ['stress_day_summary', 3],
+      ]),
+    )
+    expect(values.map(([metric]) => metric)).not.toContain('readiness_sleep_regularity')
+  })
+
+  test('stores ring battery levels and raw-only documents', async () => {
+    await processOuraData('ky_home', 'ringBatteryLevel', [
+      { charging: false, level: 80, timestamp: '2026-10-18T06:00:00Z' },
+      { charging: true, level: 85, timestamp: '2026-10-18T06:30:00Z' },
+    ])
+    await processOuraData('ky_home', 'sleepTime', [
+      { day: '2026-10-18', id: 'st-1', recommendation: 'follow_optimal_bedtime', status: 'optimal_found' },
+    ])
+    await processOuraData('ky_home', 'restModePeriods', [
+      {
+        end_day: null,
+        episodes: [],
+        id: 'rm-1',
+        start_day: '2026-10-10',
+        start_time: '2026-10-10T09:00:00+02:00',
+      },
+    ])
+
+    expect(metricValues()).toEqual([
+      ['ring_battery_level', 80],
+      ['ring_battery_level', 85],
+    ])
+    for (const [externalId, recordType] of [
+      ['2026-10-18', 'ring_battery_level'],
+      ['st-1', 'sleep_time'],
+      ['rm-1', 'rest_mode_period'],
+    ]) {
+      expect(db.insertRawRecord).toHaveBeenCalledWith(
+        'ky_home',
+        expect.objectContaining({ external_id: externalId, record_type: recordType }),
+      )
+    }
+  })
 })

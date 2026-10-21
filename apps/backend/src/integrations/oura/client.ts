@@ -44,6 +44,9 @@ type OuraSession = {
   motion_count: unknown
 }
 
+/** Oura interval sample (PublicSample): `items[i]` is measured at `timestamp + i * interval` seconds. */
+export type OuraSampleRaw = { interval: number; items: (number | null)[]; timestamp?: string }
+
 /** Raw Oura sleep period record from /v2/usercollection/sleep */
 export type OuraSleepPeriodRaw = {
   id: string
@@ -51,12 +54,25 @@ export type OuraSleepPeriodRaw = {
   bedtime_start: string
   bedtime_end: string
   sleep_phase_5_min: string | null
-  heart_rate: { interval: number; items: (number | null)[] } | null
-  heart_rate_variability: { interval: number; items: (number | null)[] } | null
+  heart_rate: OuraSampleRaw | null
+  /** The API names the 5-minute RMSSD series `hrv`. */
+  hrv?: OuraSampleRaw | null
+  /** Older payloads used this name; kept as a fallback. */
+  heart_rate_variability?: OuraSampleRaw | null
+  average_breath?: number | null
   average_hrv: number | null
+  awake_time?: number | null
+  deep_sleep_duration?: number | null
+  efficiency?: number | null
+  latency?: number | null
+  light_sleep_duration?: number | null
   lowest_heart_rate: number | null
   average_heart_rate: number | null
   readiness_score_delta: number | null
+  rem_sleep_duration?: number | null
+  restless_periods?: number | null
+  time_in_bed?: number | null
+  total_sleep_duration?: number | null
   day: string
 }
 
@@ -76,6 +92,13 @@ export type OuraWorkoutRaw = {
 export type OuraHeartRateRaw = {
   bpm: number
   source?: string
+  timestamp: string
+}
+
+export type OuraRingBatteryLevelRaw = {
+  charging?: boolean | null
+  in_charger?: boolean | null
+  level: number
   timestamp: string
 }
 
@@ -160,6 +183,23 @@ export const ouraClient = (
       },
       token,
     )
+
+  /** Fetch a datetime-ranged collection in one-day windows (bounded retries for high-frequency data). */
+  const getByDayWindows = async <T>(type: string, start: Date, end: Date, token: string): Promise<T[]> => {
+    const records: T[] = []
+    let windowStart = start
+    while (isBefore(windowStart, end)) {
+      const windowEnd = min([addDays(startOfDay(windowStart), 1), end])
+      const page = await getCollection<T>(
+        type,
+        { end_datetime: windowEnd.toISOString(), start_datetime: windowStart.toISOString() },
+        token,
+      )
+      records.push(...page)
+      windowStart = windowEnd
+    }
+    return records
+  }
 
   const getPersonalInfo = async (accessToken: string): Promise<{ id: string } | null> => {
     try {
@@ -290,9 +330,8 @@ export const ouraClient = (
     },
 
     async getDailyCardiovascularAge(start: Date, end: Date, token: string) {
-      return (await getGeneric<{ timestamp: string }>('daily_cardiovascular_age', start, end, token)).filter(
-        ({ timestamp }: { timestamp: string }) => isBefore(timestamp, end) && isAfter(timestamp, start),
-      )
+      // Day-only records (no timestamp): the start_date/end_date query already bounds them.
+      return getGeneric<Record<string, unknown>>('daily_cardiovascular_age', start, end, token)
     },
 
     async getDailyActivity(start: Date, end: Date, token: string) {
@@ -312,25 +351,32 @@ export const ouraClient = (
     },
 
     async getHeartRate(start: Date, end: Date, token: string): Promise<OuraHeartRateRaw[]> {
-      // One-day datetime windows keep high-frequency retries bounded; getCollection
-      // follows every next_token page within each window.
-      const samples: OuraHeartRateRaw[] = []
-      let windowStart = start
-      while (isBefore(windowStart, end)) {
-        const windowEnd = min([addDays(startOfDay(windowStart), 1), end])
-        const records = await getCollection<OuraHeartRateRaw>(
-          'heartrate',
-          { end_datetime: windowEnd.toISOString(), start_datetime: windowStart.toISOString() },
-          token,
-        )
-        samples.push(...records)
-        windowStart = windowEnd
-      }
-      return samples
+      return getByDayWindows<OuraHeartRateRaw>('heartrate', start, end, token)
+    },
+
+    async getRingBatteryLevel(start: Date, end: Date, token: string): Promise<OuraRingBatteryLevelRaw[]> {
+      return getByDayWindows<OuraRingBatteryLevelRaw>('ring_battery_level', start, end, token)
     },
 
     async getRingConfiguration(_start: Date, _end: Date, token: string) {
       return getCollection<Record<string, unknown>>('ring_configuration', {}, token)
+    },
+
+    async getPersonalInfo(_start: Date, _end: Date, token: string) {
+      const info = await getPersonalInfo(token)
+      return info ? [info as Record<string, unknown>] : []
+    },
+
+    async getRestModePeriods(start: Date, end: Date, token: string) {
+      return getGeneric<Record<string, unknown>>('rest_mode_period', start, end, token)
+    },
+
+    async getSleepTime(start: Date, end: Date, token: string) {
+      return getGeneric<Record<string, unknown>>('sleep_time', start, end, token)
+    },
+
+    async getVo2Max(start: Date, end: Date, token: string) {
+      return getGeneric<Record<string, unknown>>('vO2_max', start, end, token)
     },
 
     async getDailyReadiness(start: Date, end: Date, token: string) {
@@ -340,9 +386,8 @@ export const ouraClient = (
     },
 
     async getDailyResilience(start: Date, end: Date, token: string) {
-      return (await getGeneric<{ timestamp: string }>('daily_resilience', start, end, token)).filter(
-        ({ timestamp }: { timestamp: string }) => isBefore(timestamp, end) && isAfter(timestamp, start),
-      )
+      // Day-only records (no timestamp): the start_date/end_date query already bounds them.
+      return getGeneric<Record<string, unknown>>('daily_resilience', start, end, token)
     },
 
     async getDailySleep(start: Date, end: Date, token: string) {

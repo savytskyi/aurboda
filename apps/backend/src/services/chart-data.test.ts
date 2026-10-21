@@ -137,7 +137,7 @@ describe('getChartData', () => {
     // chart/challenge over-count.
     expect(call[1]).toContain('source = ANY')
     expect(call[1]).toContain('deleted_at IS NULL')
-    expect(call[2]).toContainEqual(['health_connect_aggregate', 'aurboda'])
+    expect(call[2]).toContainEqual(['health_connect_aggregate', 'aurboda', 'oura'])
   })
 
   test('non-cumulative metric sum does not restrict sources', async () => {

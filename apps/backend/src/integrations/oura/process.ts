@@ -8,7 +8,13 @@
 import { Temporal } from '@js-temporal/polyfill'
 
 import type { MetricType } from '../../schema.ts'
-import type { OuraHeartRateRaw, OuraSleepPeriodRaw, OuraTagWithComment, OuraWorkoutRaw } from './client.ts'
+import type {
+  OuraHeartRateRaw,
+  OuraRingBatteryLevelRaw,
+  OuraSleepPeriodRaw,
+  OuraTagWithComment,
+  OuraWorkoutRaw,
+} from './client.ts'
 
 import {
   insertActivity,
@@ -28,10 +34,15 @@ export type OuraDataType =
   | 'dailySpo2'
   | 'dailyStress'
   | 'heartRate'
+  | 'personalInfo'
+  | 'restModePeriods'
+  | 'ringBatteryLevel'
   | 'ringConfiguration'
   | 'sessions'
   | 'sleep'
+  | 'sleepTime'
   | 'tags'
+  | 'vo2Max'
   | 'workouts'
 
 interface OuraDailyRecord {
@@ -41,14 +52,19 @@ interface OuraDailyRecord {
 }
 
 interface OuraCardiovascularAge extends OuraDailyRecord {
-  vascular_age: number
+  vascular_age: number | null
+  pulse_wave_velocity?: number | null
 }
 
 interface OuraReadiness extends OuraDailyRecord {
   score: number
-  temperature_deviation?: number
-  temperature_trend_deviation?: number
-  contributors?: Record<string, number>
+  temperature_deviation?: number | null
+  temperature_trend_deviation?: number | null
+  contributors?: Record<string, number | null>
+}
+
+interface OuraVo2Max extends OuraDailyRecord {
+  vo2_max?: number | null
 }
 
 interface OuraResilience extends OuraDailyRecord {
@@ -99,8 +115,11 @@ interface OuraDailyActivity extends OuraDailyRecord {
 interface OuraDailyStress extends OuraDailyRecord {
   stress_high?: number
   recovery_high?: number
-  day_summary?: string
+  day_summary?: string | null
 }
+
+/** Ordinal encoding of Oura's daily stress summary (higher = more stressful). */
+const stressSummaryLevel: Record<string, number> = { normal: 2, restored: 1, stressful: 3 }
 
 interface OuraDailySpo2 extends OuraDailyRecord {
   spo2_percentage?: { average?: number }
@@ -120,6 +139,7 @@ interface OuraRingConfiguration extends OuraDailyRecord {
 interface OuraIntervalData {
   interval: number // interval in seconds
   items: (number | null)[]
+  timestamp?: string // time of items[0]; falls back to the record start
 }
 
 interface OuraSession {
@@ -211,6 +231,7 @@ const processDailyStress = async (user: string, data: OuraDailyStress[]) => {
     })
     pushMetric(points, 'stress_high_sec', record.stress_high, time)
     pushMetric(points, 'recovery_high_sec', record.recovery_high, time)
+    pushMetric(points, 'stress_day_summary', stressSummaryLevel[record.day_summary ?? ''], time)
   }
   await insertTimeSeries(user, points)
 }
@@ -263,6 +284,65 @@ const processHeartRate = async (user: string, data: OuraHeartRateRaw[]) => {
   for (let offset = 0; offset < points.length; offset += batchSize) {
     await insertTimeSeries(user, points.slice(offset, offset + batchSize))
   }
+}
+
+const processRingBatteryLevel = async (user: string, data: OuraRingBatteryLevelRaw[]) => {
+  const points: TimeSeriesPoint[] = []
+  const rawByDay = new Map<string, OuraRingBatteryLevelRaw[]>()
+
+  for (const record of data) {
+    const day = record.timestamp.slice(0, 10)
+    const dailySamples = rawByDay.get(day) ?? []
+    dailySamples.push(record)
+    rawByDay.set(day, dailySamples)
+    pushMetric(points, 'ring_battery_level', record.level, new Date(record.timestamp))
+  }
+
+  for (const [day, samples] of rawByDay) {
+    await insertRawRecord(user, {
+      data: { day, samples },
+      external_id: day,
+      record_type: 'ring_battery_level',
+      recorded_at: new Date(samples[0].timestamp),
+      source: 'oura',
+    })
+  }
+  await insertTimeSeries(user, points)
+}
+
+/** Store day-scoped Oura documents that have no numeric metrics (raw records only). */
+const processRawDailyDocuments = async (
+  user: string,
+  recordType: string,
+  data: (OuraDailyRecord & { start_day?: string; start_time?: string | null })[],
+) => {
+  for (const record of data) {
+    await insertRawRecord(user, {
+      data: record as unknown as Record<string, unknown>,
+      external_id: record.id,
+      record_type: recordType,
+      recorded_at: record.start_time
+        ? new Date(record.start_time)
+        : dailyRecordTime({ ...record, day: record.day ?? record.start_day }),
+      source: 'oura',
+    })
+  }
+}
+
+const processVo2Max = async (user: string, data: OuraVo2Max[]) => {
+  const points: TimeSeriesPoint[] = []
+  for (const record of data) {
+    const time = dailyRecordTime(record)
+    await insertRawRecord(user, {
+      data: record as unknown as Record<string, unknown>,
+      external_id: record.id,
+      record_type: 'vo2_max',
+      recorded_at: time,
+      source: 'oura',
+    })
+    pushMetric(points, 'vo2_max', record.vo2_max, time)
+  }
+  await insertTimeSeries(user, points)
 }
 
 const processWorkouts = async (user: string, data: OuraWorkoutRaw[]) => {
@@ -345,14 +425,8 @@ const processCardiovascularAge = async (user: string, data: OuraCardiovascularAg
       source: 'oura',
     })
 
-    if (record.vascular_age !== undefined) {
-      points.push({
-        metric: 'cardiovascular_age',
-        source: 'oura',
-        time,
-        value: record.vascular_age,
-      })
-    }
+    pushMetric(points, 'cardiovascular_age', record.vascular_age, time)
+    pushMetric(points, 'pulse_wave_velocity', record.pulse_wave_velocity, time)
   }
 
   if (points.length > 0) {
@@ -374,13 +448,12 @@ const processReadiness = async (user: string, data: OuraReadiness[]) => {
       source: 'oura',
     })
 
-    if (record.score !== undefined) {
-      points.push({
-        metric: 'readiness_score',
-        source: 'oura',
-        time,
-        value: record.score,
-      })
+    pushMetric(points, 'readiness_score', record.score, time)
+    pushMetric(points, 'temperature_deviation', record.temperature_deviation, time)
+    pushMetric(points, 'temperature_trend_deviation', record.temperature_trend_deviation, time)
+    for (const [key, value] of Object.entries(record.contributors ?? {})) {
+      const metric = readinessContributorMetricMap[key]
+      if (metric) pushMetric(points, metric, value, time)
     }
   }
 
@@ -389,14 +462,29 @@ const processReadiness = async (user: string, data: OuraReadiness[]) => {
   }
 }
 
+const readinessContributorMetricMap: Record<string, MetricType> = {
+  activity_balance: 'readiness_activity_balance',
+  body_temperature: 'readiness_body_temperature',
+  hrv_balance: 'readiness_hrv_balance',
+  previous_day_activity: 'readiness_previous_day_activity',
+  previous_night: 'readiness_previous_night',
+  recovery_index: 'readiness_recovery_index',
+  resting_heart_rate: 'readiness_resting_heart_rate',
+  sleep_balance: 'readiness_sleep_balance',
+  sleep_regularity: 'readiness_sleep_regularity',
+}
+
+/** Oura's five long-term resilience levels, evenly spread over 0–100 in ascending order. */
+const resilienceLevelToScore: Record<string, number> = {
+  adequate: 40,
+  exceptional: 100,
+  limited: 20,
+  solid: 60,
+  strong: 80,
+}
+
 const processResilience = async (user: string, data: OuraResilience[]) => {
   const points: TimeSeriesPoint[] = []
-  const levelToScore: Record<string, number> = {
-    exceptional: 100,
-    limited: 25,
-    solid: 75,
-    strong: 50,
-  }
 
   for (const record of data) {
     const time = dailyRecordTime(record)
@@ -409,14 +497,10 @@ const processResilience = async (user: string, data: OuraResilience[]) => {
       source: 'oura',
     })
 
-    if (record.level && record.level in levelToScore) {
-      points.push({
-        metric: 'resilience_score',
-        source: 'oura',
-        time,
-        value: levelToScore[record.level],
-      })
-    }
+    pushMetric(points, 'resilience_score', resilienceLevelToScore[record.level], time)
+    pushMetric(points, 'resilience_sleep_recovery', record.contributors?.sleep_recovery, time)
+    pushMetric(points, 'resilience_daytime_recovery', record.contributors?.daytime_recovery, time)
+    pushMetric(points, 'resilience_stress', record.contributors?.stress, time)
   }
 
   if (points.length > 0) {
@@ -486,6 +570,7 @@ const extractIntervalPoints = (
 
   const points: TimeSeriesPoint[] = []
   const intervalMs = intervalData.interval * 1000
+  const originMs = intervalData.timestamp ? new Date(intervalData.timestamp).getTime() : startTime.getTime()
 
   for (let i = 0; i < intervalData.items.length; i++) {
     const value = intervalData.items[i]
@@ -493,7 +578,7 @@ const extractIntervalPoints = (
       points.push({
         metric,
         source: 'oura',
-        time: new Date(startTime.getTime() + i * intervalMs),
+        time: new Date(originMs + i * intervalMs),
         value,
       })
     }
@@ -631,6 +716,21 @@ const OURA_SLEEP_TYPE_MAP: Record<string, 'sleep' | 'meditation'> = {
   rest: 'meditation',
 }
 
+/** Per-night totals from the main (long_sleep) period, stamped at wake time like resting HR. */
+const sleepPeriodMetricMap: Array<[keyof OuraSleepPeriodRaw, MetricType]> = [
+  ['total_sleep_duration', 'sleep_duration_sec'],
+  ['deep_sleep_duration', 'sleep_deep_sec'],
+  ['rem_sleep_duration', 'sleep_rem_sec'],
+  ['light_sleep_duration', 'sleep_light_sec'],
+  ['awake_time', 'sleep_awake_sec'],
+  ['time_in_bed', 'time_in_bed_sec'],
+  ['efficiency', 'sleep_efficiency_percent'],
+  ['latency', 'sleep_latency_sec'],
+  ['average_breath', 'respiratory_rate'],
+  ['average_heart_rate', 'sleep_average_heart_rate'],
+  ['restless_periods', 'sleep_restless_periods'],
+]
+
 const processSleep = async (user: string, data: OuraSleepPeriodRaw[]) => {
   for (const record of data) {
     const bedtimeStart = new Date(record.bedtime_start)
@@ -685,13 +785,16 @@ const processSleep = async (user: string, data: OuraSleepPeriodRaw[]) => {
     const hrPoints = extractIntervalPoints(bedtimeStart, record.heart_rate ?? undefined, 'heart_rate')
     const hrvPoints = extractIntervalPoints(
       bedtimeStart,
-      record.heart_rate_variability ?? undefined,
+      record.hrv ?? record.heart_rate_variability ?? undefined,
       'hrv_rmssd',
     )
     const timeSeriesPoints = [...hrPoints, ...hrvPoints]
     if (record.type === 'long_sleep') {
       pushMetric(timeSeriesPoints, 'resting_heart_rate', record.lowest_heart_rate, bedtimeEnd)
       pushMetric(timeSeriesPoints, 'hrv_sleep', record.average_hrv, bedtimeEnd)
+      for (const [field, metric] of sleepPeriodMetricMap) {
+        pushMetric(timeSeriesPoints, metric, record[field] as number | null | undefined, bedtimeEnd)
+      }
     }
 
     if (timeSeriesPoints.length > 0) {
@@ -778,6 +881,21 @@ export const processOuraData = async (
   switch (dataType) {
     case 'heartRate':
       await processHeartRate(user, data as OuraHeartRateRaw[])
+      break
+    case 'personalInfo':
+      await processRawDailyDocuments(user, 'personal_info', data as OuraDailyRecord[])
+      break
+    case 'restModePeriods':
+      await processRawDailyDocuments(user, 'rest_mode_period', data as OuraDailyRecord[])
+      break
+    case 'ringBatteryLevel':
+      await processRingBatteryLevel(user, data as OuraRingBatteryLevelRaw[])
+      break
+    case 'sleepTime':
+      await processRawDailyDocuments(user, 'sleep_time', data as OuraDailyRecord[])
+      break
+    case 'vo2Max':
+      await processVo2Max(user, data as OuraVo2Max[])
       break
     case 'ringConfiguration':
       await processRingConfiguration(user, data as OuraRingConfiguration[])
