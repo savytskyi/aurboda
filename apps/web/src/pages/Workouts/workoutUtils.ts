@@ -163,3 +163,32 @@ export const sourceName = (source: string): string =>
     strava: 'Strava',
     web: 'Web',
   })[source] ?? source
+
+/**
+ * A strength session either has its sets logged (Hermes, web, Gravl) or is a
+ * synced session with nothing logged yet (typically Oura-only); other
+ * workouts carry no sets by nature.
+ */
+export const logState = (w: WorkoutSummary): 'logged' | 'unlogged' | 'none' =>
+  w.sets_status === 'not_logged' ? 'unlogged' : w.sets_status === 'logged' ? 'logged' : 'none'
+
+/** Solid for logged and non-strength workouts, an outline in the type colour for unlogged strength. */
+export const markStyle = (w: WorkoutSummary): Record<string, string> =>
+  logState(w) === 'unlogged'
+    ? { background: 'transparent', boxShadow: `inset 0 0 0 2px ${w.color}` }
+    : { background: w.color }
+
+export const markLabel = (w: WorkoutSummary): string => {
+  const state = logState(w)
+  if (state === 'unlogged') {
+    return `${w.display_name} — sets not logged (${w.sources.map(sourceName).join(' + ')} only)`
+  }
+  if (state === 'logged') return `${w.display_name} — ${w.set_count} sets logged`
+  return w.display_name
+}
+
+/** Strength sessions in the list with and without logged sets. */
+export const strengthLogCounts = (workouts: WorkoutSummary[]): { logged: number; unlogged: number } => ({
+  logged: workouts.filter((w) => logState(w) === 'logged').length,
+  unlogged: workouts.filter((w) => logState(w) === 'unlogged').length,
+})

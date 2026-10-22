@@ -2,7 +2,16 @@ import type { WorkoutCalendarConfig } from '@aurboda/api-spec'
 
 import { useQuery } from '@tanstack/react-query'
 
-import { addDays, groupByDay, localDay, parseDay, typesIn } from '../../pages/Workouts/workoutUtils'
+import {
+  addDays,
+  groupByDay,
+  localDay,
+  markLabel,
+  markStyle,
+  parseDay,
+  strengthLogCounts,
+  typesIn,
+} from '../../pages/Workouts/workoutUtils'
 import { fetchWorkouts } from '../../state/api'
 import '../../pages/Workouts/style.css'
 
@@ -17,6 +26,7 @@ export function WorkoutCalendarWidget({ config }: { config: WorkoutCalendarConfi
   const byDay = groupByDay(workouts)
   const cells = Array.from({ length: days }, (_, i) => addDays(from, i))
   const types = typesIn(workouts)
+  const strength = strengthLogCounts(workouts)
   const minutes = Math.round(workouts.reduce((s, w) => s + (w.duration_min ?? 0), 0))
 
   return (
@@ -29,6 +39,8 @@ export function WorkoutCalendarWidget({ config }: { config: WorkoutCalendarConfi
           <div class="workout-hint">
             {workouts.length} workouts · {byDay.size} training days · {Math.floor(minutes / 60)} h{' '}
             {minutes % 60} min
+            {strength.logged + strength.unlogged > 0 &&
+              ` · strength sets logged ${strength.logged}/${strength.logged + strength.unlogged}`}
           </div>
           <div class="workout-widget-grid">
             {cells.map((day) => {
@@ -37,10 +49,10 @@ export function WorkoutCalendarWidget({ config }: { config: WorkoutCalendarConfi
                 <span
                   key={day}
                   class="workout-widget-cell"
-                  title={`${day}: ${list.map((w) => w.display_name).join(', ') || 'rest'}`}
+                  title={`${day}: ${list.map(markLabel).join('; ') || 'rest'}`}
                 >
                   {list.slice(0, 3).map((w) => (
-                    <span key={w.id} style={{ background: w.color }} />
+                    <span key={w.id} style={markStyle(w)} />
                   ))}
                 </span>
               )

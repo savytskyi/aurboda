@@ -5,6 +5,10 @@ import { describe, expect, it } from 'vitest'
 import {
   calendarMonths,
   groupByDay,
+  logState,
+  markLabel,
+  markStyle,
+  strengthLogCounts,
   trainingDaysPerWeek,
   weekStartOf,
   weeklyByType,
@@ -77,5 +81,24 @@ describe('workout calendar helpers', () => {
       covered: 2,
       secs: [120, 120, 240, 0, 0, 0],
     })
+  })
+})
+
+describe('strength log state', () => {
+  it('tells logged strength sessions from synced ones with no sets', () => {
+    const logged = w({
+      activity_type: 'strength_training',
+      set_count: 8,
+      sets_status: 'logged',
+      sources: ['hermes', 'oura'],
+    })
+    const ouraOnly = w({ activity_type: 'strength_training', sets_status: 'not_logged', sources: ['oura'] })
+    const walk = w({})
+    expect([logged, ouraOnly, walk].map(logState)).toEqual(['logged', 'unlogged', 'none'])
+    expect(markStyle(ouraOnly)).toEqual({ background: 'transparent', boxShadow: 'inset 0 0 0 2px #8b5cf6' })
+    expect(markStyle(logged)).toEqual({ background: '#8b5cf6' })
+    expect(markLabel(ouraOnly)).toBe('Walking — sets not logged (Oura only)')
+    expect(markLabel(logged)).toBe('Walking — 8 sets logged')
+    expect(strengthLogCounts([logged, ouraOnly, walk])).toEqual({ logged: 1, unlogged: 1 })
   })
 })

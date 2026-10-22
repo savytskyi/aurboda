@@ -13,8 +13,12 @@ import {
   formatMinutes,
   groupByDay,
   localDay,
+  logState,
+  markLabel,
+  markStyle,
   parseDay,
   sourceName,
+  strengthLogCounts,
   trainingDaysPerWeek,
   typesIn,
   weeklyByType,
@@ -36,11 +40,14 @@ export function WorkoutChip({ workout }: { workout: WorkoutSummary }) {
   })
   return (
     <a class="workout-chip" href={`/workouts/${workout.id}`} style={{ borderLeftColor: workout.color }}>
-      <span class="workout-chip-title">{workout.title ?? workout.display_name}</span>
+      <span class="workout-chip-title">
+        {workout.title ?? workout.display_name}
+        {logState(workout) === 'logged' && <span class="badge">sets logged</span>}
+        {logState(workout) === 'unlogged' && <span class="badge warn">sets not logged</span>}
+      </span>
       <span class="workout-chip-meta">
         {time} · {formatMinutes(workout.duration_min)}
         {workout.set_count > 0 && ` · ${workout.set_count} sets`}
-        {workout.sets_status === 'not_logged' && ' · sets not logged'}
         {workout.hr_avg !== undefined && ` · ♥ ${workout.hr_avg}`}
       </span>
       <span class="workout-chip-sources">{workout.sources.map(sourceName).join(' + ')}</span>
@@ -84,17 +91,12 @@ function Calendar({
                   key={day}
                   class={`workout-day${outside ? ' outside' : ''}${day === selected ? ' selected' : ''}${list.length ? ' has' : ''}`}
                   onClick={() => onSelect(day)}
-                  aria-label={`${day}: ${list.length} workouts`}
+                  aria-label={`${day}: ${list.map(markLabel).join('; ') || 'no workouts'}`}
                 >
                   <span class="workout-day-num">{parseDay(day).getDate()}</span>
                   <span class="workout-day-marks">
                     {list.slice(0, 4).map((w) => (
-                      <span
-                        class="workout-mark"
-                        key={w.id}
-                        style={{ background: w.color }}
-                        title={w.display_name}
-                      />
+                      <span class="workout-mark" key={w.id} style={markStyle(w)} title={markLabel(w)} />
                     ))}
                     {list.length > 4 && <span class="workout-more">+{list.length - 4}</span>}
                   </span>
@@ -225,6 +227,7 @@ export function Workouts() {
   const totalMinutes = shown.reduce((sum, w) => sum + (w.duration_min ?? 0), 0)
   const trainingDays = new Set(shown.map((w) => localDay(w.start_time))).size
   const strengthVolume = shown.reduce((sum, w) => sum + w.volume_kg, 0)
+  const strengthCounts = strengthLogCounts(shown)
   const selectedList = selectedDay ? (groupByDay(shown).get(selectedDay) ?? []) : []
   const rangeStart = weekIso(weeks[0]!)
   const rangeEnd = weekIso(addDays(weeks.at(-1)!, 6))
@@ -296,6 +299,16 @@ export function Workouts() {
         </div>
       )}
 
+      <div class="mark-legend">
+        <span>
+          <span class="workout-mark" style={{ background: '#3b82f6' }} /> sets logged / other workouts
+        </span>
+        <span>
+          <span class="workout-mark" style={{ boxShadow: 'inset 0 0 0 2px #3b82f6' }} /> strength session,
+          sets not logged
+        </span>
+      </div>
+
       {error ? (
         <div class="workout-error">Could not load workouts.</div>
       ) : isLoading ? (
@@ -314,6 +327,12 @@ export function Workouts() {
             <div>
               <strong>{trainingDays}</strong>
               <span>training days</span>
+            </div>
+            <div>
+              <strong>
+                {strengthCounts.logged} / {strengthCounts.logged + strengthCounts.unlogged}
+              </strong>
+              <span>strength sessions with sets logged</span>
             </div>
             <div>
               <strong>{Math.round(strengthVolume).toLocaleString()} kg</strong>
