@@ -83,6 +83,7 @@ const recordedFingerprints = (database: string) =>
   mocks.state.queries
     .filter((q) => q.database === database && q.sql.includes('INSERT INTO schema_migrations'))
     .flatMap((q) => q.params ?? [])
+    .filter((name) => String(name).startsWith('schema@'))
 
 /** Distinct per test: `getDbForUser` caches its pool per user, module-wide. */
 let counter = 0
