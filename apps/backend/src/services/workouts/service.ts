@@ -312,7 +312,7 @@ const buildWorkouts = async (
       .map((other) => other.winner.id!)
     const hr: WorkoutHeartRate = {
       avg: status === 'unavailable' || stats?.avg === undefined ? undefined : Math.round(stats.avg),
-      coverage: round1(coverage * 100) / 100,
+      coverage: Math.round(coverage * 1000) / 1000,
       max: status === 'unavailable' ? undefined : stats?.max,
       overlapping_activity_ids: overlapping,
       sample_count: sampleCount,
