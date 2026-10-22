@@ -214,6 +214,10 @@ export const workoutSummarySchema = z
     hr_avg: z.number().optional(),
     hr_coverage: z.number().optional(),
     hr_max: z.number().optional(),
+    icon: z
+      .string()
+      .optional()
+      .meta({ description: "The workout type's icon: an emoji or an uploaded icon path" }),
     id: z.string().meta({ description: 'Activity id of the row that represents the merged workout' }),
     member_ids: z.array(z.string()),
     notes: z.string().optional(),

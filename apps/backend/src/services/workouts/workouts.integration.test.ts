@@ -92,7 +92,9 @@ describe('unified workouts', () => {
     const list = await listWorkouts(user, day)
     expect(list.map((w) => w.activity_type).sort()).toEqual(['biking', 'walking', 'wrestling'])
     const wrestling = list.find((w) => w.activity_type === 'wrestling')!
+    expect(list.find((w) => w.activity_type === 'biking')?.icon).toBe('🚴')
     expect(wrestling).toMatchObject({
+      icon: '🤼',
       calories: 262,
       sets_status: 'not_applicable',
       sources: ['oura'],

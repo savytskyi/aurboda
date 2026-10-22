@@ -196,13 +196,19 @@ interface TypeInfo {
   display_name: string
   color: string
   category: string
+  icon?: string
 }
 
 const loadTypes = async (user: string): Promise<Map<string, TypeInfo>> =>
   new Map(
     (await getActivityTypeDefinitions(user)).map((d) => [
       d.name,
-      { category: d.display_category, color: d.color, display_name: d.display_name },
+      {
+        category: d.display_category,
+        color: d.color,
+        display_name: d.display_name,
+        icon: d.icon ?? undefined,
+      },
     ]),
   )
 
@@ -344,6 +350,7 @@ const buildWorkouts = async (
       activity_type: winner.activity_type,
       calories: calories ? Math.round(calories.value) : undefined,
       color: type?.color ?? '#6b7280',
+      icon: type?.icon,
       display_name: type?.display_name ?? winner.activity_type,
       distance: distance ? Math.round(distance.value) : undefined,
       duration_min: minutes,

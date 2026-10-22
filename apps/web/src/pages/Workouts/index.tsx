@@ -7,6 +7,7 @@ import { BarChart } from '../../components/charts/BarChart'
 import { TrendLineChart } from '../../components/charts/TrendLineChart'
 import { fetchMetricTimeSeries, fetchWorkouts } from '../../state/api'
 import { auth } from '../../state/auth'
+import { WorkoutBadge } from './WorkoutBadge'
 import {
   addDays,
   calendarMonths,
@@ -15,7 +16,6 @@ import {
   localDay,
   logState,
   markLabel,
-  markStyle,
   parseDay,
   sourceName,
   strengthLogCounts,
@@ -41,6 +41,12 @@ export function WorkoutChip({ workout }: { workout: WorkoutSummary }) {
   return (
     <a class="workout-chip" href={`/workouts/${workout.id}`} style={{ borderLeftColor: workout.color }}>
       <span class="workout-chip-title">
+        <WorkoutBadge
+          icon={workout.icon}
+          color={workout.color}
+          outline={logState(workout) === 'unlogged'}
+          size="sm"
+        />{' '}
         {workout.title ?? workout.display_name}
         {logState(workout) === 'logged' && <span class="badge">sets logged</span>}
         {logState(workout) === 'unlogged' && <span class="badge warn">sets not logged</span>}
@@ -96,7 +102,13 @@ function Calendar({
                   <span class="workout-day-num">{parseDay(day).getDate()}</span>
                   <span class="workout-day-marks">
                     {list.slice(0, 4).map((w) => (
-                      <span class="workout-mark" key={w.id} style={markStyle(w)} title={markLabel(w)} />
+                      <WorkoutBadge
+                        key={w.id}
+                        icon={w.icon}
+                        color={w.color}
+                        outline={logState(w) === 'unlogged'}
+                        title={markLabel(w)}
+                      />
                     ))}
                     {list.length > 4 && <span class="workout-more">+{list.length - 4}</span>}
                   </span>
@@ -292,7 +304,7 @@ export function Workouts() {
               class={`type-filter${hidden.has(t.type) ? ' off' : ''}`}
               onClick={() => toggle(t.type)}
             >
-              <span class="workout-mark" style={{ background: t.color }} />
+              <WorkoutBadge icon={t.icon} color={t.color} size="sm" />
               {t.name}
             </button>
           ))}
@@ -301,11 +313,10 @@ export function Workouts() {
 
       <div class="mark-legend">
         <span>
-          <span class="workout-mark" style={{ background: '#3b82f6' }} /> sets logged / other workouts
+          <WorkoutBadge icon="🏋️" color="#3b82f6" size="sm" /> sets logged / other workouts
         </span>
         <span>
-          <span class="workout-mark" style={{ boxShadow: 'inset 0 0 0 2px #3b82f6' }} /> strength session,
-          sets not logged
+          <WorkoutBadge icon="🏋️" color="#3b82f6" size="sm" outline /> strength session, sets not logged
         </span>
       </div>
 
@@ -416,7 +427,9 @@ export function Workouts() {
                   return (
                     <tr key={t.type}>
                       <td>
-                        <span class="workout-mark" style={{ background: t.color }} /> {t.name}
+                        <span class="type-cell">
+                          <WorkoutBadge icon={t.icon} color={t.color} size="sm" /> {t.name}
+                        </span>
                       </td>
                       <td>{list.length}</td>
                       <td>{(list.length / Math.max(1, weeks.length)).toFixed(1)}</td>

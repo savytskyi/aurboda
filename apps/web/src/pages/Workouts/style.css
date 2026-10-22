@@ -533,12 +533,15 @@
   border-radius: 4px;
   background: #f3f4f6;
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
+  align-content: center;
+  justify-content: center;
+  gap: 1px;
   overflow: hidden;
 }
 
-.workout-widget-cell > span {
-  flex: 1;
+.workout-widget-cell .workout-more {
+  font-size: 0.55rem;
 }
 
 .workout-widget {
@@ -565,4 +568,80 @@
 .workout-chip-title .badge {
   margin-left: 0.4rem;
   vertical-align: middle;
+}
+
+.workout-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1.5px solid transparent;
+  border-radius: 6px;
+  box-sizing: border-box;
+  line-height: 1;
+}
+
+.workout-badge-md {
+  width: 1.55rem;
+  height: 1.55rem;
+  font-size: 0.95rem;
+}
+
+.workout-badge-sm {
+  width: 1.15rem;
+  height: 1.15rem;
+  font-size: 0.7rem;
+  border-radius: 4px;
+}
+
+.workout-badge.outline {
+  border-style: dashed;
+  background: #fff;
+}
+
+.workout-badge.outline > * {
+  opacity: 0.55;
+}
+
+.workout-badge img {
+  width: 75%;
+  height: 75%;
+  object-fit: contain;
+}
+
+.workout-badge-dot {
+  width: 45%;
+  height: 45%;
+  border-radius: 50%;
+}
+
+.workout-day-marks {
+  gap: 3px;
+}
+
+@media (max-width: 520px) {
+  .workout-day-marks .workout-badge-md {
+    width: 1.15rem;
+    height: 1.15rem;
+    font-size: 0.7rem;
+    border-radius: 4px;
+  }
+}
+
+.workout-detail-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.type-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.type-filter .workout-badge,
+.mark-legend .workout-badge,
+.zone-legend .workout-badge {
+  margin-right: 0.1rem;
 }

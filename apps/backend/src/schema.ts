@@ -87,6 +87,7 @@ export const tableCreationOrder = [
   'activity_override_targets_indexes',
   'activity_override_targets_trigger',
   'workout_activity_types_seed',
+  'workout_activity_icons_seed',
   'workout_links',
   'workout_links_indexes',
   'exercise_definitions',

@@ -187,6 +187,26 @@ export const activitiesTables: Record<string, string> = {
      WHERE d.name = c.name AND d.color = '#22c55e'
   `,
 
+  // Default workout icons, applied only while a type has none, so an icon
+  // chosen on the Types page is never overwritten.
+  workout_activity_icons_seed: `
+    UPDATE activity_type_definitions AS d SET icon = c.icon
+      FROM (VALUES
+        ('exercise', '🏅'), ('other_workout', '🏅'),
+        ('strength_training', '🏋️'), ('weightlifting', '🏋️'), ('calisthenics', '🤸'),
+        ('walking', '🚶'), ('hiking', '🥾'), ('running', '🏃'), ('running_treadmill', '🏃'),
+        ('biking', '🚴'), ('biking_stationary', '🚴'),
+        ('wrestling', '🤼'), ('martial_arts', '🥋'), ('boxing', '🥊'),
+        ('swimming', '🏊'), ('swimming_pool', '🏊'), ('swimming_open_water', '🏊'),
+        ('yoga', '🧘'), ('pilates', '🧘'), ('stretching', '🤸'),
+        ('soccer', '⚽'), ('tennis', '🎾'), ('basketball', '🏀'), ('volleyball', '🏐'),
+        ('skiing', '⛷️'), ('snowboarding', '🏂'), ('rowing', '🚣'), ('rowing_machine', '🚣'),
+        ('rock_climbing', '🧗'), ('dancing', '💃'), ('golf', '⛳'), ('elliptical', '🏃'),
+        ('high_intensity_interval_training', '🔥'), ('yard_work', '🌱'), ('housework', '🧹')
+      ) AS c(name, icon)
+     WHERE d.name = c.name AND (d.icon IS NULL OR d.icon = '')
+  `,
+
   activity_type_definitions: `
     CREATE TABLE IF NOT EXISTS activity_type_definitions (
       name              VARCHAR(100) PRIMARY KEY,

@@ -2,12 +2,13 @@ import type { WorkoutCalendarConfig } from '@aurboda/api-spec'
 
 import { useQuery } from '@tanstack/react-query'
 
+import { WorkoutBadge } from '../../pages/Workouts/WorkoutBadge'
 import {
   addDays,
   groupByDay,
   localDay,
+  logState,
   markLabel,
-  markStyle,
   parseDay,
   strengthLogCounts,
   typesIn,
@@ -51,9 +52,16 @@ export function WorkoutCalendarWidget({ config }: { config: WorkoutCalendarConfi
                   class="workout-widget-cell"
                   title={`${day}: ${list.map(markLabel).join('; ') || 'rest'}`}
                 >
-                  {list.slice(0, 3).map((w) => (
-                    <span key={w.id} style={markStyle(w)} />
+                  {list.slice(0, 2).map((w) => (
+                    <WorkoutBadge
+                      key={w.id}
+                      icon={w.icon}
+                      color={w.color}
+                      outline={logState(w) === 'unlogged'}
+                      size="sm"
+                    />
                   ))}
+                  {list.length > 2 && <span class="workout-more">+{list.length - 2}</span>}
                 </span>
               )
             })}
@@ -61,7 +69,7 @@ export function WorkoutCalendarWidget({ config }: { config: WorkoutCalendarConfi
           <div class="zone-legend">
             {types.slice(0, 6).map((t) => (
               <span key={t.type}>
-                <span class="workout-mark" style={{ background: t.color }} />
+                <WorkoutBadge icon={t.icon} color={t.color} size="sm" />
                 {t.name}
               </span>
             ))}

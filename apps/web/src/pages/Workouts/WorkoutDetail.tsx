@@ -15,7 +15,8 @@ import {
   updateStrengthSet,
 } from '../../state/api'
 import { auth } from '../../state/auth'
-import { formatMinutes, sourceName } from './workoutUtils'
+import { WorkoutBadge } from './WorkoutBadge'
+import { formatMinutes, logState, sourceName } from './workoutUtils'
 import './style.css'
 
 const ZONE_COLORS = ['#cbd5e1', '#93c5fd', '#4ade80', '#facc15', '#fb923c', '#ef4444']
@@ -347,7 +348,14 @@ export function WorkoutDetail() {
     <div class="workout-detail">
       <a href="/workouts">← Workouts</a>
       <div class="workout-detail-head" style={{ borderLeftColor: workout.color }}>
-        <h1>{workout.title ?? workout.display_name}</h1>
+        <h1 class="workout-detail-title">
+          <WorkoutBadge
+            icon={workout.icon}
+            color={workout.color}
+            outline={logState(workout) === 'unlogged'}
+          />
+          {workout.title ?? workout.display_name}
+        </h1>
         <div class="sub">
           {workout.display_name} · {date} · {timeOf(workout.start_time)}
           {workout.end_time && `–${timeOf(workout.end_time)}`} · {formatMinutes(workout.duration_min)}

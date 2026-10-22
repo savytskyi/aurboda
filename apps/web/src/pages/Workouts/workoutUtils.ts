@@ -72,6 +72,7 @@ export interface TypeInfo {
   type: string
   name: string
   color: string
+  icon?: string
 }
 
 /** Workout types present, most frequent first. */
@@ -79,7 +80,7 @@ export const typesIn = (workouts: WorkoutSummary[]): TypeInfo[] => {
   const counts = new Map<string, { info: TypeInfo; n: number }>()
   for (const w of workouts) {
     const entry = counts.get(w.activity_type) ?? {
-      info: { color: w.color, name: w.display_name, type: w.activity_type },
+      info: { color: w.color, icon: w.icon, name: w.display_name, type: w.activity_type },
       n: 0,
     }
     entry.n++
