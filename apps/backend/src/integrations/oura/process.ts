@@ -17,6 +17,7 @@ import type {
 } from './client.ts'
 
 import {
+  getActivityTypeDefinitions,
   insertActivity,
   insertRawRecord,
   insertTimeSeries,
@@ -24,6 +25,10 @@ import {
   type TimeSeriesPoint,
   upsertSyncedNote,
 } from '../../db/index.ts'
+import { auditError } from '../../services/audit-log.ts'
+import { STRENGTH_TYPES } from '../../services/workouts/matching.ts'
+import { reconcileStrengthWorkouts } from '../../services/workouts/service.ts'
+import { humanizeOuraActivity, ouraWorkoutActivityType } from './workout-types.ts'
 
 export type OuraDataType =
   | 'dailyActivity'
@@ -374,11 +379,17 @@ const processWorkouts = async (user: string, data: OuraWorkoutRaw[]) => {
     if (!existing || record.id < existing.id) uniqueWorkouts.set(signature, record)
   }
 
+  const knownTypes = new Set(
+    uniqueWorkouts.size > 0 ? (await getActivityTypeDefinitions(user)).map((d) => d.name) : [],
+  )
+  const strengthDays = new Map<string, Date>()
   for (const record of uniqueWorkouts.values()) {
     const startTime = new Date(record.start_datetime)
     const endTime = new Date(record.end_datetime)
+    const activityType = ouraWorkoutActivityType(record.activity, knownTypes)
+    if (STRENGTH_TYPES.has(activityType)) strengthDays.set(startTime.toISOString().slice(0, 10), startTime)
     await insertActivity(user, {
-      activity_type: 'exercise',
+      activity_type: activityType,
       data: {
         activity: record.activity,
         calories: record.calories,
@@ -391,8 +402,17 @@ const processWorkouts = async (user: string, data: OuraWorkoutRaw[]) => {
       external_id: record.id,
       source: 'oura',
       start_time: startTime,
-      title: record.label || record.activity,
+      title: record.label || humanizeOuraActivity(record.activity),
     })
+  }
+
+  // Sets logged before Oura delivered the session are joined to it now.
+  for (const around of strengthDays.values()) {
+    try {
+      await reconcileStrengthWorkouts(user, around)
+    } catch (error) {
+      auditError(user, 'sync', 'Strength workout reconciliation failed', { error: String(error) })
+    }
   }
 }
 

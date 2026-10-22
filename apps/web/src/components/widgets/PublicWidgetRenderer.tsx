@@ -56,6 +56,8 @@ export function PublicWidgetRenderer({ widget, data }: PublicWidgetRendererProps
       )
     case 'last_sleep':
       return <LastSleepView config={widget.config} data={data?.type === 'last_sleep' ? data.data : null} />
+    case 'workout_calendar':
+      return <div class="widget-unknown">Workouts are not shown on shared dashboards</div>
     default:
       return <div class="widget-unknown">Unknown widget type</div>
   }

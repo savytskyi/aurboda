@@ -220,6 +220,20 @@ export const lastSleepConfigSchema = z
 
 export type LastSleepConfig = z.infer<typeof lastSleepConfigSchema>
 
+export const workoutCalendarConfigSchema = z
+  .object({
+    lookback_days: z
+      .number()
+      .int()
+      .min(7)
+      .max(90)
+      .optional()
+      .meta({ description: 'Days of workouts to show (default: 30)' }),
+  })
+  .meta({ id: 'WorkoutCalendarConfig' })
+
+export type WorkoutCalendarConfig = z.infer<typeof workoutCalendarConfigSchema>
+
 export const widgetTypeSchema = z.enum([
   'metric_card',
   'sparkline_card',
@@ -231,6 +245,7 @@ export const widgetTypeSchema = z.enum([
   'hr_zones',
   'goal_progress',
   'last_sleep',
+  'workout_calendar',
 ])
 
 export type WidgetType = z.infer<typeof widgetTypeSchema>
@@ -285,6 +300,11 @@ export const dashboardWidgetSchema = z.discriminatedUnion('type', [
     config: lastSleepConfigSchema,
     id: z.string().min(1).meta({ description: 'Unique widget ID' }),
     type: z.literal('last_sleep'),
+  }),
+  z.object({
+    config: workoutCalendarConfigSchema,
+    id: z.string().min(1).meta({ description: 'Unique widget ID' }),
+    type: z.literal('workout_calendar'),
   }),
 ])
 
@@ -418,6 +438,11 @@ export const defaultDashboardConfig: DashboardConfig = {
       title: 'Activity',
       type: 'charts',
       widgets: [
+        {
+          config: { lookback_days: 30 },
+          id: 'workout-calendar',
+          type: 'workout_calendar',
+        },
         {
           config: { lookback_days: 7 },
           id: 'activity-summary',

@@ -88,6 +88,9 @@ const Signup = lazyPage(() => import('./pages/Signup/index.jsx'), 'Signup')
 const Sleep = lazyPage(() => import('./pages/Sleep/index.jsx'), 'Sleep')
 const Terms = lazyPage(() => import('./pages/Terms/index.jsx'), 'Terms')
 const Timeline = lazyPage(() => import('./pages/Timeline/index.jsx'), 'Timeline')
+const Workouts = lazyPage(() => import('./pages/Workouts/index.jsx'), 'Workouts')
+const WorkoutDetail = lazyPage(() => import('./pages/Workouts/WorkoutDetail.jsx'), 'WorkoutDetail')
+const StrengthProgress = lazyPage(() => import('./pages/Strength/index.jsx'), 'StrengthProgress')
 
 function AppShell() {
   const { path } = useLocation()
@@ -115,6 +118,9 @@ function AppShell() {
             <Route path="/terms" component={Terms} />
             <Route path="/goals" component={Goals} />
             <Route path="/timeline" component={Timeline} />
+            <Route path="/workouts/:id" component={WorkoutDetail} />
+            <Route path="/workouts" component={Workouts} />
+            <Route path="/strength" component={StrengthProgress} />
             <Route path="/data" component={Data} />
             <Route path="/add" component={AddData} />
             <Route path="/food-items/:id" component={FoodItemDetail} />

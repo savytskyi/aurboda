@@ -135,6 +135,8 @@ export const cleanTestDb = async (): Promise<void> => {
     'import_jobs',
     'custom_metrics',
     'goals',
+    'api_idempotency_keys',
+    'exercise_definitions',
   ]
 
   for (const table of tables) {

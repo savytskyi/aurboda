@@ -227,6 +227,7 @@ export const widgetDataSchema = z
     z.object({ data: hrZonesDataSchema.nullable(), type: z.literal('hr_zones') }),
     z.object({ data: goalProgressDataSchema.nullable(), type: z.literal('goal_progress') }),
     z.object({ data: latestSleepSchema.nullable(), type: z.literal('last_sleep') }),
+    z.object({ data: z.null(), type: z.literal('workout_calendar') }),
   ])
   .meta({ id: 'WidgetData' })
 

@@ -53,6 +53,7 @@ import { registerSharedDashboardTools } from './mcp/shared-dashboard-tools.ts'
 import { registerSyncTools } from './mcp/sync-tools.ts'
 import { registerTrainingLoadTools } from './mcp/training-load-tools.ts'
 import { registerTrendTools } from './mcp/trend-tools.ts'
+import { registerWorkoutTools } from './mcp/workout-tools.ts'
 import { createDefaultEngineDeps } from './services/deduction-deps.ts'
 import { isOAuthAccessToken, validateAccessToken } from './services/oauth.ts'
 
@@ -93,6 +94,7 @@ const createMcpServer = (user: string, deps: McpDeps = {}): McpServer => {
   registerQueryTools(server, user, deps.sync)
   registerMetricTools(server, user)
   registerActivityTools(server, user, deps.onActivityMutated)
+  registerWorkoutTools(server, user)
   registerActivityTypeTools(server, user)
   registerDeductionRuleTools(server, user, engineDeps, deps.deductionQueue)
   if (deps.autosharePreviewDeps) registerAutoshareRuleTools(server, user, deps.autosharePreviewDeps)

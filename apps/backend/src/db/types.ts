@@ -100,6 +100,10 @@ export interface Activity {
    * Only aurboda rows may carry an override.
    */
   override_target_ids?: string[]
+  /** Activities confirmed (`workout_links`) to be the same workout as this one; forces a merge. */
+  linked_ids?: string[]
+  /** Activities the user unlinked from this one; never merged with it automatically. */
+  unlinked_ids?: string[]
 }
 
 /**

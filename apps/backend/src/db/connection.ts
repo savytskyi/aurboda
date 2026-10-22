@@ -1673,6 +1673,13 @@ export const migrateSchema = async (user: string, opts?: { force?: boolean }) =>
     })
   }
 
+  // Imported lazily: it reaches the supersession module, which imports this one.
+  const { retypeOuraWorkouts } = await import('./workout-migrations.ts')
+  const retype = await retypeOuraWorkouts(user)
+  if (retype.retyped > 0) {
+    console.info(`  Retyped ${retype.retyped} Oura workouts, supersession recomputed for ${retype.days} days`)
+  }
+
   // Last, and only on success: a sweep that threw must run again next time.
   await recordSchemaFingerprint(db, fingerprint)
 }

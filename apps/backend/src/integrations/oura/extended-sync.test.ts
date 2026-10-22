@@ -4,6 +4,9 @@ import * as db from '../../db/index.ts'
 import { processOuraData } from './process.ts'
 
 vi.mock('../../db/index.ts', () => ({
+  getActivityTypeDefinitions: vi
+    .fn()
+    .mockResolvedValue([{ name: 'running' }, { name: 'walking' }, { name: 'strength_training' }]),
   insertActivity: vi.fn().mockResolvedValue('activity-id'),
   insertRawRecord: vi.fn().mockResolvedValue(undefined),
   insertTimeSeries: vi.fn().mockResolvedValue(undefined),
@@ -127,7 +130,12 @@ describe('extended Oura processors', () => {
     expect(db.insertActivity).toHaveBeenCalledTimes(2)
     expect(db.insertActivity).toHaveBeenLastCalledWith(
       'ky_home',
-      expect.objectContaining({ activity_type: 'exercise', external_id: 'workout-1', source: 'oura' }),
+      expect.objectContaining({
+        activity_type: 'running',
+        external_id: 'workout-1',
+        source: 'oura',
+        title: 'Running',
+      }),
     )
   })
 

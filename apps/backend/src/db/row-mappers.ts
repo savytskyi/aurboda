@@ -119,6 +119,12 @@ export const mapActivityRow = (row: QueryResultRow): Activity => ({
     Array.isArray(row.override_target_ids) && row.override_target_ids.length > 0
       ? row.override_target_ids
       : undefined,
+  linked_ids:
+    Array.isArray(row.linked_ids) && row.linked_ids.length > 0 ? (row.linked_ids as string[]) : undefined,
+  unlinked_ids:
+    Array.isArray(row.unlinked_ids) && row.unlinked_ids.length > 0
+      ? (row.unlinked_ids as string[])
+      : undefined,
   source: parseDataSource(row.source),
   start_time: new Date(row.start_time),
   superseded_by: row.superseded_by ?? undefined,

@@ -110,6 +110,83 @@ export const activitiesTables: Record<string, string> = {
     END $$
   `,
 
+  // Confirmed, suggested or rejected identity between two activity rows that
+  // describe one workout (e.g. an Oura strength session and the sets logged
+  // through Hermes). Confirmed links force a merge; rejected ones prevent the
+  // automatic same-type merge, which is what makes an unlink stick.
+  workout_links: `
+    CREATE TABLE IF NOT EXISTS workout_links (
+      primary_id  UUID NOT NULL REFERENCES activities(id) ON DELETE CASCADE,
+      linked_id   UUID NOT NULL REFERENCES activities(id) ON DELETE CASCADE,
+      status      VARCHAR(16) NOT NULL CHECK (status IN ('confirmed', 'suggested', 'rejected')),
+      method      VARCHAR(8) NOT NULL CHECK (method IN ('auto', 'user')),
+      confidence  REAL NOT NULL DEFAULT 0,
+      reasons     JSONB NOT NULL DEFAULT '[]'::jsonb,
+      restore     JSONB,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (primary_id, linked_id),
+      CHECK (primary_id <> linked_id)
+    )
+  `,
+  workout_links_indexes: `
+    CREATE INDEX IF NOT EXISTS idx_workout_links_linked ON workout_links (linked_id)
+  `,
+
+  exercise_definitions: `
+    CREATE TABLE IF NOT EXISTS exercise_definitions (
+      key           VARCHAR(120) PRIMARY KEY,
+      name          VARCHAR(120) NOT NULL,
+      aliases       TEXT[] NOT NULL DEFAULT '{}',
+      category      VARCHAR(60),
+      muscle_group  VARCHAR(60),
+      equipment     VARCHAR(60),
+      is_bodyweight BOOLEAN NOT NULL DEFAULT false,
+      created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `,
+
+  // Replay store for client-supplied idempotency keys (Hermes retries a
+  // Telegram message with the same key). The request hash rejects a key reused
+  // for a different request instead of silently returning the wrong result.
+  api_idempotency_keys: `
+    CREATE TABLE IF NOT EXISTS api_idempotency_keys (
+      scope         VARCHAR(60) NOT NULL,
+      key           VARCHAR(200) NOT NULL,
+      request_hash  VARCHAR(64) NOT NULL,
+      response      JSONB NOT NULL,
+      created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (scope, key)
+    )
+  `,
+
+  workout_activity_types_seed: `
+    INSERT INTO activity_type_definitions (name, display_name, display_category, color, is_builtin, health_connect_record_type, health_connect_exercise_type, parent_type) VALUES
+      ('wrestling', 'Wrestling', 'exercise', '#f97316', true, 'ExerciseSessionRecord', 44, 'martial_arts'),
+      ('swimming', 'Swimming', 'exercise', '#06b6d4', true, 'ExerciseSessionRecord', 74, 'exercise'),
+      ('yard_work', 'Yard Work', 'exercise', '#84cc16', true, 'ExerciseSessionRecord', 0, 'exercise'),
+      ('housework', 'Housework', 'exercise', '#a3a3a3', true, 'ExerciseSessionRecord', 0, 'exercise')
+    ON CONFLICT (name) DO NOTHING;
+    -- Distinct workout colours, applied only while a type still has the
+    -- shared default so a user's own colour choice is never overwritten.
+    UPDATE activity_type_definitions AS d SET color = c.color
+      FROM (VALUES
+        ('strength_training', '#3b82f6'),
+        ('weightlifting', '#2563eb'),
+        ('calisthenics', '#60a5fa'),
+        ('martial_arts', '#ea580c'),
+        ('walking', '#8b5cf6'),
+        ('hiking', '#a16207'),
+        ('running', '#ef4444'),
+        ('running_treadmill', '#f87171'),
+        ('swimming_pool', '#0891b2'),
+        ('swimming_open_water', '#0e7490'),
+        ('yoga', '#d946ef'),
+        ('soccer', '#14b8a6')
+      ) AS c(name, color)
+     WHERE d.name = c.name AND d.color = '#22c55e'
+  `,
+
   activity_type_definitions: `
     CREATE TABLE IF NOT EXISTS activity_type_definitions (
       name              VARCHAR(100) PRIMARY KEY,

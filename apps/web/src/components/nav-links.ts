@@ -7,6 +7,8 @@ export const NAV_LINKS_PRIMARY = [
   { href: '/', label: 'Home', icon: '🏠' },
   { href: '/goals', label: 'Goals', icon: '🎯' },
   { href: '/timeline', label: 'Timeline', icon: '📅' },
+  { href: '/workouts', label: 'Workouts', icon: '🏋' },
+  { href: '/strength', label: 'Strength', icon: '💪' },
   { href: '/data', label: 'Data', icon: '📊' },
   { href: '/meals', label: 'Meals', icon: '🍽' },
   { href: '/reports', label: 'Reports', icon: '📝' },

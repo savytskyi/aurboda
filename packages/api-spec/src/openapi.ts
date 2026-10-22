@@ -87,6 +87,24 @@ import {
   webauthnSignupVerifyResponseSchema,
   webauthnUpdateCredentialBodySchema,
 } from './schemas/webauthn.ts'
+import {
+  addExerciseBodySchema,
+  exerciseResponseSchema,
+  exercisesResponseSchema,
+  linkWorkoutBodySchema,
+  logStrengthBodySchema,
+  logStrengthResponseSchema,
+  parseStrengthBodySchema,
+  parseStrengthResponseSchema,
+  strengthProgressQuerySchema,
+  strengthProgressResponseSchema,
+  strengthSetMutationResponseSchema,
+  updateStrengthSetBodySchema,
+  workoutDetailResponseSchema,
+  workoutLinksResponseSchema,
+  workoutsQuerySchema,
+  workoutsResponseSchema,
+} from './schemas/workouts.ts'
 
 const errorResponseSchema = z
   .object({
@@ -251,6 +269,192 @@ const openApiDocument = createDocument({
         security: [{ bearerAuth: [] }],
         summary: 'Get activity track',
         tags: ['Activities'],
+      },
+    },
+    '/workouts': {
+      get: {
+        description:
+          'Workouts of every type and source in a range (default: the last 30 days), one entry per merged session.',
+        requestParams: { query: workoutsQuerySchema },
+        responses: {
+          200: {
+            content: { 'application/json': { schema: workoutsResponseSchema } },
+            description: 'Successful response',
+          },
+        },
+        security: [{ bearerAuth: [] }],
+        summary: 'List workouts',
+        tags: ['Workouts'],
+      },
+    },
+    '/workouts/{id}': {
+      get: {
+        description:
+          'One workout with its sets, exercise totals, sources and per-field provenance, heart-rate coverage and zones, links and suggested links.',
+        requestParams: {
+          path: z.object({ id: z.string().uuid().meta({ description: 'Workout (activity) ID' }) }),
+        },
+        responses: {
+          200: {
+            content: { 'application/json': { schema: workoutDetailResponseSchema } },
+            description: 'Successful response',
+          },
+        },
+        security: [{ bearerAuth: [] }],
+        summary: 'Get workout',
+        tags: ['Workouts'],
+      },
+    },
+    '/workouts/strength': {
+      post: {
+        description:
+          'Log sets from free text or structured exercises. Idempotent by the Idempotency-Key header or idempotency_key field; grouping decides whether sets join an existing workout. Matching synced strength sessions are linked automatically when unambiguous.',
+        requestBody: { content: { 'application/json': { schema: logStrengthBodySchema } } },
+        responses: {
+          200: {
+            content: { 'application/json': { schema: logStrengthResponseSchema } },
+            description: 'Successful response',
+          },
+        },
+        security: [{ bearerAuth: [] }],
+        summary: 'Log strength sets',
+        tags: ['Workouts'],
+      },
+    },
+    '/workouts/strength/parse': {
+      post: {
+        description: 'Read a strength log message into exercises and sets without saving.',
+        requestBody: { content: { 'application/json': { schema: parseStrengthBodySchema } } },
+        responses: {
+          200: {
+            content: { 'application/json': { schema: parseStrengthResponseSchema } },
+            description: 'Successful response',
+          },
+        },
+        security: [{ bearerAuth: [] }],
+        summary: 'Parse strength text',
+        tags: ['Workouts'],
+      },
+    },
+    '/workouts/strength/progress': {
+      get: {
+        description:
+          'Per-session top set, Epley estimated 1RM, volume, weekly totals, PRs and raw sets of one exercise.',
+        requestParams: { query: strengthProgressQuerySchema },
+        responses: {
+          200: {
+            content: { 'application/json': { schema: strengthProgressResponseSchema } },
+            description: 'Successful response',
+          },
+        },
+        security: [{ bearerAuth: [] }],
+        summary: 'Strength progress',
+        tags: ['Workouts'],
+      },
+    },
+    '/workouts/{id}/sets/{setId}': {
+      patch: {
+        description: 'Correct one manually logged set.',
+        requestParams: {
+          path: z.object({
+            id: z.string().uuid().meta({ description: 'Workout (activity) ID' }),
+            setId: z.string().meta({ description: 'Set ID' }),
+          }),
+        },
+        requestBody: { content: { 'application/json': { schema: updateStrengthSetBodySchema } } },
+        responses: {
+          200: {
+            content: { 'application/json': { schema: strengthSetMutationResponseSchema } },
+            description: 'Successful response',
+          },
+        },
+        security: [{ bearerAuth: [] }],
+        summary: 'Update strength set',
+        tags: ['Workouts'],
+      },
+      delete: {
+        description: 'Delete one manually logged set.',
+        requestParams: {
+          path: z.object({
+            id: z.string().uuid().meta({ description: 'Workout (activity) ID' }),
+            setId: z.string().meta({ description: 'Set ID' }),
+          }),
+        },
+        responses: {
+          200: {
+            content: { 'application/json': { schema: strengthSetMutationResponseSchema } },
+            description: 'Successful response',
+          },
+        },
+        security: [{ bearerAuth: [] }],
+        summary: 'Delete strength set',
+        tags: ['Workouts'],
+      },
+    },
+    '/workouts/{id}/links': {
+      post: {
+        description: 'Confirm that two activities are the same workout.',
+        requestParams: {
+          path: z.object({ id: z.string().uuid().meta({ description: 'Workout (activity) ID' }) }),
+        },
+        requestBody: { content: { 'application/json': { schema: linkWorkoutBodySchema } } },
+        responses: {
+          200: {
+            content: { 'application/json': { schema: workoutLinksResponseSchema } },
+            description: 'Successful response',
+          },
+        },
+        security: [{ bearerAuth: [] }],
+        summary: 'Link workouts',
+        tags: ['Workouts'],
+      },
+    },
+    '/workouts/{id}/links/{linkedId}': {
+      delete: {
+        description:
+          'Separate two activities merged as one workout; they are not merged automatically again.',
+        requestParams: {
+          path: z.object({
+            id: z.string().uuid().meta({ description: 'Workout (activity) ID' }),
+            linkedId: z.string().uuid().meta({ description: 'Linked activity ID' }),
+          }),
+        },
+        responses: {
+          200: {
+            content: { 'application/json': { schema: workoutLinksResponseSchema } },
+            description: 'Successful response',
+          },
+        },
+        security: [{ bearerAuth: [] }],
+        summary: 'Unlink workouts',
+        tags: ['Workouts'],
+      },
+    },
+    '/workouts/exercises': {
+      get: {
+        description: 'Exercise catalog with aliases and logged-set counts.',
+        responses: {
+          200: {
+            content: { 'application/json': { schema: exercisesResponseSchema } },
+            description: 'Successful response',
+          },
+        },
+        security: [{ bearerAuth: [] }],
+        summary: 'List exercises',
+        tags: ['Workouts'],
+      },
+      post: {
+        description: 'Add a custom exercise or aliases for one.',
+        requestBody: { content: { 'application/json': { schema: addExerciseBodySchema } } },
+        responses: {
+          200: {
+            content: { 'application/json': { schema: exerciseResponseSchema } },
+            description: 'Successful response',
+          },
+        },
+        security: [{ bearerAuth: [] }],
+        summary: 'Add exercise',
+        tags: ['Workouts'],
       },
     },
     '/routes': {

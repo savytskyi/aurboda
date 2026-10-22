@@ -65,6 +65,13 @@ const widgetTemplates: WidgetTemplate[] = [
   },
   {
     allowedSections: ['metrics', 'charts'],
+    defaultConfig: () => ({ lookback_days: 30 }),
+    description: 'Calendar of recent workouts, coloured by type',
+    label: 'Workout Calendar',
+    type: 'workout_calendar',
+  },
+  {
+    allowedSections: ['metrics', 'charts'],
     defaultConfig: () => ({
       lookback_days: 7,
     }),
@@ -262,6 +269,24 @@ export function DashboardEditor({ sectionType, onAddWidget, onClose }: Dashboard
                 }
                 min={1}
                 max={30}
+              />
+            </div>
+          </div>
+        )
+
+      case 'workout_calendar':
+        return (
+          <div class="config-form">
+            <div class="form-group">
+              <label>Days</label>
+              <input
+                type="number"
+                value={(configValues.lookback_days as number) ?? 30}
+                onChange={(e) =>
+                  updateConfig('lookback_days', parseInt((e.target as HTMLInputElement).value, 10))
+                }
+                min={7}
+                max={90}
               />
             </div>
           </div>

@@ -10,6 +10,7 @@ import { MetricCardWidget } from './MetricCardWidget'
 import { QuickLinkWidget } from './QuickLinkWidget'
 import { SparklineCardWidget } from './SparklineCardWidget'
 import { TrendChartWidget } from './TrendChartWidget'
+import { WorkoutCalendarWidget } from './WorkoutCalendarWidget'
 
 interface WidgetRendererProps {
   widget: DashboardWidget
@@ -46,6 +47,8 @@ export function WidgetRenderer({ widget, isEditing, onRemove, boardId, sectionId
         return <GoalProgressWidget config={widget.config} />
       case 'last_sleep':
         return <LastSleepWidget config={widget.config} />
+      case 'workout_calendar':
+        return <WorkoutCalendarWidget config={widget.config} />
       default:
         return <div class="widget-unknown">Unknown widget type</div>
     }

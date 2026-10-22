@@ -84,7 +84,19 @@ const isOverrideLinked = (a: Activity, b: Activity): boolean => {
   return false
 }
 
+const listsId = (ids: string[] | undefined, id: string | undefined): boolean => !!id && !!ids?.includes(id)
+
+/** A confirmed workout link between the two rows, in either direction. */
+export const isWorkoutLinked = (a: Activity, b: Activity): boolean =>
+  listsId(a.linked_ids, b.id) || listsId(b.linked_ids, a.id)
+
+/** The user unlinked the two rows: they stay separate whatever their times and types. */
+export const isWorkoutUnlinked = (a: Activity, b: Activity): boolean =>
+  listsId(a.unlinked_ids, b.id) || listsId(b.unlinked_ids, a.id)
+
 const isCrossMergePair = (a: Activity, b: Activity, categoryMap: Map<string, string>): boolean => {
+  if (isWorkoutUnlinked(a, b)) return false
+  if (isWorkoutLinked(a, b)) return true
   if (!CROSS_MERGE_SOURCES.has(b.source)) return false
   if (a.source === b.source) return false
   // Override link forces a cross-merge pair regardless of type/category — the
@@ -180,7 +192,7 @@ const eligibleAnchor = (
   if (!CROSS_MERGE_SOURCES.has(a.source)) return false
   const isOverride = a.source === 'aurboda' && !!a.override_target_ids?.length
   const targetedByOverride = a.id !== undefined && overrideByTargetId.has(a.id)
-  if (isOverride || targetedByOverride) return true
+  if (isOverride || targetedByOverride || a.linked_ids?.length) return true
   const catA = categoryMap.get(a.activity_type)
   return !!catA && CROSS_MERGEABLE_CATEGORIES.has(catA)
 }
@@ -209,6 +221,12 @@ const pairAnchor = (
       const targetIdx = idToIndex.get(targetId)
       if (targetIdx !== undefined) ufUnion(parent, rank, i, targetIdx)
     }
+  }
+  // Linked workouts are unioned however far apart they start: sets logged
+  // after the session carry the message time, not Oura's start.
+  for (const linkedId of a.linked_ids ?? []) {
+    const linkedIdx = idToIndex.get(linkedId)
+    if (linkedIdx !== undefined) ufUnion(parent, rank, i, linkedIdx)
   }
   for (let j = i + 1; j < sorted.length; j++) {
     if (sorted[j].start_time.getTime() - a.start_time.getTime() > CROSS_MERGE_THRESHOLD_MS) break
@@ -290,8 +308,13 @@ export const mergeOverlappingActivities = (
       const currentEnd = current.end_time?.getTime() ?? current.start_time.getTime()
       const nextStart = next.start_time.getTime()
 
+      const unlinkedFromGroup =
+        isWorkoutUnlinked(current, next) ||
+        (next.unlinked_ids ?? []).some((id) => currentSourceIds.includes(id)) ||
+        typeActivities.some((m) => currentSourceIds.includes(m.id ?? '') && listsId(m.unlinked_ids, next.id))
+
       // Check if activities overlap or touch
-      if (currentEnd >= nextStart) {
+      if (currentEnd >= nextStart && !unlinkedFromGroup) {
         const nextEnd = next.end_time?.getTime()
         if (
           nextEnd !== undefined &&

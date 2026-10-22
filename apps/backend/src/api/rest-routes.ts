@@ -74,6 +74,7 @@ import { createTrainingLoadRouter } from '../routes/training-load-router.ts'
 import { createTrendsRouter } from '../routes/trends-router.ts'
 import { createWebAuthnRouter } from '../routes/webauthn-router.ts'
 import { createWellKnownRouter, type WellKnownConfig } from '../routes/well-known-router.ts'
+import { createWorkoutsRouter } from '../routes/workouts-router.ts'
 import { renderChartPng, renderRoutePng, renderScatterPng } from '../services/activitypub/feed-images.ts'
 import { fetchOsmTile } from '../services/activitypub/osm-tiles.ts'
 import { getArticleChartSeriesData, getArticleCorrelationScatter } from '../services/article-block-data.ts'
@@ -183,6 +184,7 @@ export const mountRestRouters = ({
       },
     ),
   )
+  httpd.use('/workouts', createWorkoutsRouter(authMiddleware))
   httpd.use('/productivity', createProductivityRouter(authMiddleware, syncProvider))
   httpd.use('/activity-types', createActivityTypesRouter(authMiddleware))
   httpd.use(

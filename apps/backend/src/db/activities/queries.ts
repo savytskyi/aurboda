@@ -9,6 +9,11 @@ import { query } from '../connection.ts'
 import { mapActivityRow } from '../row-mappers.ts'
 import { findMergedGroupForActivity, mergeOverlappingActivities } from './merge.ts'
 
+const workoutLinkColumn = (alias: string, status: 'confirmed' | 'rejected'): string =>
+  `(SELECT array_agg(CASE WHEN wl.primary_id = ${alias}.id THEN wl.linked_id ELSE wl.primary_id END)
+      FROM workout_links wl
+     WHERE wl.status = '${status}' AND (wl.primary_id = ${alias}.id OR wl.linked_id = ${alias}.id))`
+
 /**
  * SELECT column list for an activities row. The `override_target_ids` is
  * built from the `activity_override_targets` join table via a correlated
@@ -20,7 +25,9 @@ import { findMergedGroupForActivity, mergeOverlappingActivities } from './merge.
  */
 export const activityColumns = (alias: string = 'activities'): string =>
   `${alias}.id, ${alias}.source, ${alias}.external_id, ${alias}.activity_type, ${alias}.start_time, ${alias}.end_time, ${alias}.title, ${alias}.data, ${alias}.deleted_at, ${alias}.superseded_by,
-  (SELECT array_agg(target_id) FROM activity_override_targets WHERE override_id = ${alias}.id) AS override_target_ids`
+  (SELECT array_agg(target_id) FROM activity_override_targets WHERE override_id = ${alias}.id) AS override_target_ids,
+  ${workoutLinkColumn(alias, 'confirmed')} AS linked_ids,
+  ${workoutLinkColumn(alias, 'rejected')} AS unlinked_ids`
 
 const ACTIVITY_COLUMNS_BARE = activityColumns()
 const ACTIVITY_COLUMNS_ALIAS = activityColumns('a')

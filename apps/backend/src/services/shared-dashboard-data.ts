@@ -322,6 +322,9 @@ const resolveWidget = async (user: string, widget: DashboardWidget, tz: string):
       return resolveGoalProgress(user)
     case 'last_sleep':
       return { data: await getLatestSleep(user), type: 'last_sleep' }
+    // Per-session workout detail is not published on shared boards.
+    case 'workout_calendar':
+      return { data: null, type: 'workout_calendar' }
     case 'quick_link':
       return { data: null, type: 'quick_link' }
   }
@@ -347,6 +350,8 @@ const nullData = (type: DashboardWidget['type']): WidgetData => {
     case 'goal_progress':
       return { data: null, type }
     case 'last_sleep':
+      return { data: null, type }
+    case 'workout_calendar':
       return { data: null, type }
     case 'quick_link':
       return { data: null, type }
