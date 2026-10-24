@@ -8,6 +8,7 @@ import { TrendLineChart } from '../../components/charts/TrendLineChart'
 import { fetchMetricTimeSeries, fetchWorkouts } from '../../state/api'
 import { auth } from '../../state/auth'
 import { WorkoutBadge } from './WorkoutBadge'
+import { WorkoutCalendarGrid } from './WorkoutCalendar'
 import {
   addDays,
   calendarMonths,
@@ -15,7 +16,6 @@ import {
   groupByDay,
   localDay,
   logState,
-  markLabel,
   parseDay,
   sourceName,
   strengthLogCounts,
@@ -29,7 +29,6 @@ import './style.css'
 
 const PRESETS = [7, 30, 90] as const
 const ZONE_COLORS = ['#cbd5e1', '#93c5fd', '#4ade80', '#facc15', '#fb923c', '#ef4444']
-const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 const today = () => localDay(new Date())
 
@@ -81,41 +80,15 @@ function Calendar({
       {months.map((month) => (
         <div class="workout-month" key={month.key}>
           <h3>{month.label}</h3>
-          <div class="workout-month-grid">
-            {WEEKDAYS.map((d) => (
-              <div class="workout-weekday" key={d}>
-                {d}
-              </div>
-            ))}
-            {month.weeks.flat().map((day, i) => {
-              if (!day) return <div class="workout-day empty" key={`pad-${i}`} />
-              const list = byDay.get(day) ?? []
-              const outside = day < from || day > to
-              return (
-                <button
-                  type="button"
-                  key={day}
-                  class={`workout-day${outside ? ' outside' : ''}${day === selected ? ' selected' : ''}${list.length ? ' has' : ''}`}
-                  onClick={() => onSelect(day)}
-                  aria-label={`${day}: ${list.map(markLabel).join('; ') || 'no workouts'}`}
-                >
-                  <span class="workout-day-num">{parseDay(day).getDate()}</span>
-                  <span class="workout-day-marks">
-                    {list.slice(0, 4).map((w) => (
-                      <WorkoutBadge
-                        key={w.id}
-                        icon={w.icon}
-                        color={w.color}
-                        outline={logState(w) === 'unlogged'}
-                        title={markLabel(w)}
-                      />
-                    ))}
-                    {list.length > 4 && <span class="workout-more">+{list.length - 4}</span>}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
+          <WorkoutCalendarGrid
+            days={month.weeks.flat()}
+            byDay={byDay}
+            from={from}
+            to={to}
+            maxRows={3}
+            selected={selected}
+            onSelect={onSelect}
+          />
         </div>
       ))}
     </div>

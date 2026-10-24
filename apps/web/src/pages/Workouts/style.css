@@ -140,77 +140,238 @@
 }
 
 .workout-month h3 {
-  margin: 0 0 0.4rem;
+  margin: 0 0 0.5rem;
   font-size: 1rem;
+  font-weight: 600;
 }
 
-.workout-month-grid {
+.cal-grid {
+  container-type: inline-size;
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 3px;
+  gap: 4px;
 }
 
-.workout-weekday {
-  font-size: 0.7rem;
-  color: #6b7280;
-  text-align: center;
+.cal-weekday {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #9ca3af;
+  padding: 0 0.3rem 0.15rem;
 }
 
-.workout-day {
-  min-height: 3.2rem;
+.cal-day {
+  min-height: 5.2rem;
+  min-width: 0;
   border: 1px solid #eef0f3;
-  border-radius: 6px;
-  background: #fafafa;
-  padding: 0.2rem;
+  border-radius: 8px;
+  background: #fbfbfc;
+  padding: 0.3rem;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 0.2rem;
+  gap: 0.25rem;
   font: inherit;
-  cursor: pointer;
+  color: inherit;
   text-align: left;
+  box-sizing: border-box;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 
-.workout-day.empty {
+button.cal-day {
+  cursor: pointer;
+}
+
+button.cal-day:hover {
+  border-color: #cbd5e1;
+}
+
+.cal-day.has {
+  background: #fff;
+  border-color: #e2e5ea;
+}
+
+.cal-day.pad {
   border: none;
   background: transparent;
-  cursor: default;
 }
 
-.workout-day.outside {
-  opacity: 0.35;
+.cal-day.outside {
+  opacity: 0.4;
 }
 
-.workout-day.has {
-  background: #fff;
-  border-color: #d1d5db;
+.cal-day.selected {
+  border-color: #1f2937;
+  box-shadow: 0 0 0 1px #1f2937;
 }
 
-.workout-day.selected {
-  outline: 2px solid #1f2937;
-}
-
-.workout-day-num {
-  font-size: 0.75rem;
-  color: #374151;
-}
-
-.workout-day-marks {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2px;
-  align-items: center;
-}
-
-.workout-day-marks .workout-mark {
-  width: 0.7rem;
-  height: 0.7rem;
-  border-radius: 3px;
-}
-
-.workout-more {
-  font-size: 0.65rem;
+.cal-day-num {
+  align-self: flex-start;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  line-height: 1.35rem;
+  border-radius: 999px;
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 600;
   color: #6b7280;
+}
+
+.cal-day.today .cal-day-num {
+  background: #1f2937;
+  color: #fff;
+}
+
+.cal-entries {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.cal-entry {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0.12rem 0.3rem 0.12rem 0.2rem;
+  border-left: 3px solid var(--type-color);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--type-color) 14%, transparent);
+  font-size: 0.72rem;
+  line-height: 1.2;
+  box-sizing: border-box;
+}
+
+.cal-entry.unlogged {
+  background: transparent;
+  border: 1px dashed var(--type-color);
+  border-left-width: 3px;
+  border-left-style: solid;
+}
+
+.cal-entry.unlogged .cal-entry-name {
+  opacity: 0.7;
+}
+
+.cal-entry-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  font-size: 0.8rem;
+}
+
+.cal-entry-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.cal-entry-icon .workout-badge-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+}
+
+.cal-entry-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+
+.cal-entry-count {
+  flex-shrink: 0;
+  margin-left: auto;
+  font-size: 0.66rem;
+  font-weight: 600;
+  opacity: 0.65;
+}
+
+.cal-more {
+  font-size: 0.66rem;
+  color: #6b7280;
+  padding-left: 0.3rem;
+}
+
+@container (max-width: 28rem) {
+  .cal-day {
+    min-height: 3.8rem;
+    padding: 0.2rem;
+    gap: 0.2rem;
+  }
+
+  .cal-entry {
+    justify-content: center;
+    padding: 0.1rem 0;
+    border-left-width: 2px;
+  }
+
+  .cal-entry-name,
+  .cal-entry-count,
+  .cal-more-word {
+    display: none;
+  }
+
+  .cal-more {
+    padding-left: 0;
+    text-align: center;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .workout-month h3 {
+    color: #e5e7eb;
+  }
+
+  .cal-weekday {
+    color: #6b7280;
+  }
+
+  .cal-day {
+    background: #1c1f26;
+    border-color: #262a33;
+  }
+
+  .cal-day.has {
+    background: #222631;
+    border-color: #323846;
+  }
+
+  button.cal-day:hover {
+    border-color: #4b5563;
+  }
+
+  .cal-day.selected {
+    border-color: #e5e7eb;
+    box-shadow: 0 0 0 1px #e5e7eb;
+  }
+
+  .cal-day-num {
+    color: #9ca3af;
+  }
+
+  .cal-day.today .cal-day-num {
+    background: #e5e7eb;
+    color: #111827;
+  }
+
+  .cal-entry {
+    background: color-mix(in srgb, var(--type-color) 22%, transparent);
+    color: #e5e7eb;
+  }
+
+  .cal-entry.unlogged {
+    background: transparent;
+  }
+
+  .cal-more {
+    color: #9ca3af;
+  }
 }
 
 .workout-day-panel {
@@ -521,27 +682,8 @@
   padding: 0.5rem 0.7rem;
 }
 
-.workout-widget-grid {
-  display: grid;
-  grid-template-columns: repeat(10, minmax(0, 1fr));
-  gap: 3px;
-  margin: 0.5rem 0;
-}
-
-.workout-widget-cell {
-  aspect-ratio: 1;
-  border-radius: 4px;
-  background: #f3f4f6;
-  display: flex;
-  flex-wrap: wrap;
-  align-content: center;
-  justify-content: center;
-  gap: 1px;
-  overflow: hidden;
-}
-
-.workout-widget-cell .workout-more {
-  font-size: 0.55rem;
+.workout-widget .cal-grid {
+  margin: 0.6rem 0;
 }
 
 .workout-widget {
@@ -613,19 +755,6 @@
   width: 45%;
   height: 45%;
   border-radius: 50%;
-}
-
-.workout-day-marks {
-  gap: 3px;
-}
-
-@media (max-width: 520px) {
-  .workout-day-marks .workout-badge-md {
-    width: 1.15rem;
-    height: 1.15rem;
-    font-size: 0.7rem;
-    border-radius: 4px;
-  }
 }
 
 .workout-detail-title {

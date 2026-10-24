@@ -2,7 +2,7 @@
 
 Every exercise session — Oura, Garmin, Strava, Health Connect, Gravl, or strength sets logged by hand or through a chat assistant — appears once on the **Workouts** page (`/workouts`), with a calendar, weekly charts and a detail page per workout (`/workouts/:id`). Logged lifts are charted on **Strength Progress** (`/strength`).
 
-On the calendar (and the dashboard's workout widget) a **solid** mark is a workout with its sets logged, or a workout that has no sets by nature (walk, ride, wrestling). An **outlined** mark is a strength session with no sets logged — typically one recorded only in Oura. The day panel labels each session _sets logged_ or _sets not logged_, and the summary counts how many strength sessions in the range have their sets logged.
+On the calendar (and the dashboard's workout widget) each day lists its workouts as rows of icon and name; in narrow cells (phones, a narrow widget) the rows show only the icon. Several walks, or several hikes, on one day share a single row (`Walking ×3`); the day panel still lists them separately. A **solid** row is a workout with its sets logged, or a workout that has no sets by nature (walk, ride, wrestling). A **dashed** row is a strength session with no sets logged — typically one recorded only in Oura. The day panel labels each session _sets logged_ or _sets not logged_, and the summary counts how many strength sessions in the range have their sets logged.
 
 ## Data model
 

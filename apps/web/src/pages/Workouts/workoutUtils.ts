@@ -68,6 +68,40 @@ export const calendarMonths = (from: string, to: string): CalendarMonth[] => {
   return months
 }
 
+/** Monday-first weeks covering `[from, to]`, oldest first. */
+export const calendarWeeks = (from: string, to: string): string[][] => {
+  const weeks: string[][] = []
+  for (let start = weekStartOf(from); start <= to; start = addDays(start, 7)) {
+    weeks.push(Array.from({ length: 7 }, (_, i) => addDays(start, i)))
+  }
+  return weeks
+}
+
+/** Types often recorded several times a day, which the calendar folds into one row per day. */
+const MERGED_ON_CALENDAR = new Set(['walking', 'hiking'])
+
+export interface CalendarEntry {
+  workout: WorkoutSummary
+  members: WorkoutSummary[]
+}
+
+/** One entry per workout, except one per merged type, placed where its first session falls. */
+export const calendarEntries = (workouts: WorkoutSummary[]): CalendarEntry[] => {
+  const entries: CalendarEntry[] = []
+  const merged = new Map<string, CalendarEntry>()
+  for (const w of workouts) {
+    const existing = merged.get(w.activity_type)
+    if (existing) {
+      existing.members.push(w)
+      continue
+    }
+    const entry = { members: [w], workout: w }
+    entries.push(entry)
+    if (MERGED_ON_CALENDAR.has(w.activity_type)) merged.set(w.activity_type, entry)
+  }
+  return entries
+}
+
 export interface TypeInfo {
   type: string
   name: string

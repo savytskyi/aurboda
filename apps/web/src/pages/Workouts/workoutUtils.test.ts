@@ -4,6 +4,8 @@ import { describe, expect, it } from 'vitest'
 
 import {
   calendarMonths,
+  calendarEntries,
+  calendarWeeks,
   groupByDay,
   logState,
   markLabel,
@@ -43,6 +45,24 @@ describe('workout calendar helpers', () => {
     expect(oct!.weeks[0]!.slice(0, 4)).toEqual([null, null, null, '2026-10-01'])
     expect(oct!.weeks.flat().filter(Boolean)).toHaveLength(31)
     expect(calendarMonths('2026-09-25', '2026-10-20').map((m) => m.key)).toEqual(['2026-8', '2026-9'])
+  })
+
+  it('covers a range with whole Monday-first weeks', () => {
+    const weeks = calendarWeeks('2026-10-01', '2026-10-20')
+    expect(weeks.map((week) => week[0])).toEqual(['2026-09-28', '2026-10-05', '2026-10-12', '2026-10-19'])
+    expect(weeks.at(-1)!.at(-1)).toBe('2026-10-25')
+    expect(calendarWeeks('2026-10-19', '2026-10-19')).toHaveLength(1)
+  })
+
+  it('folds walks and hikes into one calendar entry per type, keeping other repeats apart', () => {
+    const walk1 = w({})
+    const run1 = w({ activity_type: 'running' })
+    const walk2 = w({})
+    const hike = w({ activity_type: 'hiking' })
+    const run2 = w({ activity_type: 'running' })
+    const entries = calendarEntries([walk1, run1, walk2, hike, run2])
+    expect(entries.map((e) => e.workout)).toEqual([walk1, run1, hike, run2])
+    expect(entries[0]!.members).toEqual([walk1, walk2])
   })
 
   it('keeps several workouts on one day', () => {

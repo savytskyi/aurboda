@@ -3,12 +3,12 @@ import type { WorkoutCalendarConfig } from '@aurboda/api-spec'
 import { useQuery } from '@tanstack/react-query'
 
 import { WorkoutBadge } from '../../pages/Workouts/WorkoutBadge'
+import { WorkoutCalendarGrid } from '../../pages/Workouts/WorkoutCalendar'
 import {
   addDays,
+  calendarWeeks,
   groupByDay,
   localDay,
-  logState,
-  markLabel,
   parseDay,
   strengthLogCounts,
   typesIn,
@@ -25,7 +25,7 @@ export function WorkoutCalendarWidget({ config }: { config: WorkoutCalendarConfi
     queryKey: ['workouts', from, to],
   })
   const byDay = groupByDay(workouts)
-  const cells = Array.from({ length: days }, (_, i) => addDays(from, i))
+  const cells = calendarWeeks(from, to).flat()
   const types = typesIn(workouts)
   const strength = strengthLogCounts(workouts)
   const minutes = Math.round(workouts.reduce((s, w) => s + (w.duration_min ?? 0), 0))
@@ -43,29 +43,7 @@ export function WorkoutCalendarWidget({ config }: { config: WorkoutCalendarConfi
             {strength.logged + strength.unlogged > 0 &&
               ` · strength sets logged ${strength.logged}/${strength.logged + strength.unlogged}`}
           </div>
-          <div class="workout-widget-grid">
-            {cells.map((day) => {
-              const list = byDay.get(day) ?? []
-              return (
-                <span
-                  key={day}
-                  class="workout-widget-cell"
-                  title={`${day}: ${list.map(markLabel).join('; ') || 'rest'}`}
-                >
-                  {list.slice(0, 2).map((w) => (
-                    <WorkoutBadge
-                      key={w.id}
-                      icon={w.icon}
-                      color={w.color}
-                      outline={logState(w) === 'unlogged'}
-                      size="sm"
-                    />
-                  ))}
-                  {list.length > 2 && <span class="workout-more">+{list.length - 2}</span>}
-                </span>
-              )
-            })}
-          </div>
+          <WorkoutCalendarGrid days={cells} byDay={byDay} from={from} to={to} maxRows={2} />
           <div class="zone-legend">
             {types.slice(0, 6).map((t) => (
               <span key={t.type}>
