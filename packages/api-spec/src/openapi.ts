@@ -19,6 +19,17 @@ import { dateOnlySchema, iso8601DateTimeSchema, metricTypeSchema } from './schem
 import { dailySummaryResponseSchema } from './schemas/daily-summary.ts'
 import { goalsProgressResponseSchema } from './schemas/goals.ts'
 import {
+  healthDailyQuerySchema,
+  healthDailyResponseSchema,
+  healthOverviewQuerySchema,
+  healthOverviewResponseSchema,
+  ouraMetricBackfillResponseSchema,
+  sleepScheduleQuerySchema,
+  sleepScheduleResponseSchema,
+  tagImpactQuerySchema,
+  tagImpactResponseSchema,
+} from './schemas/health.ts'
+import {
   addNamedLocationBodySchema,
   addNamedLocationResponseSchema,
   detectedLocationsResponseSchema,
@@ -644,6 +655,106 @@ const openApiDocument = createDocument({
         security: [{ bearerAuth: [] }],
         summary: 'Get goal progress',
         tags: ['Goals'],
+      },
+    },
+
+    '/health/overview': {
+      get: {
+        description:
+          'Health dashboard summary for a day (default today): readiness, sleep and activity scores against the 30-day personal normal with their weakest contributors, overnight recovery signals (nightly HRV, resting HR, temperature deviation, respiratory rate) as z-scores, stress and resilience, age, and up to three insights. Values are wearable estimates, not diagnoses.',
+        requestParams: { query: healthOverviewQuerySchema },
+        responses: {
+          200: {
+            content: { 'application/json': { schema: healthOverviewResponseSchema } },
+            description: 'Successful response',
+          },
+          400: {
+            content: { 'application/json': { schema: errorResponseSchema } },
+            description: 'Invalid metric, range or timezone',
+          },
+        },
+        security: [{ bearerAuth: [] }],
+        summary: 'Get the health overview',
+        tags: ['Health'],
+      },
+    },
+
+    '/health/daily': {
+      get: {
+        description:
+          'Per-day values of health metrics (one per local day; per-night values on the wake day), each with its personal normal (mean and SD of the previous baseline_days).',
+        requestParams: { query: healthDailyQuerySchema },
+        responses: {
+          200: {
+            content: { 'application/json': { schema: healthDailyResponseSchema } },
+            description: 'Successful response',
+          },
+          400: {
+            content: { 'application/json': { schema: errorResponseSchema } },
+            description: 'Invalid metric, range or timezone',
+          },
+        },
+        security: [{ bearerAuth: [] }],
+        summary: 'Get daily health metrics with baselines',
+        tags: ['Health'],
+      },
+    },
+
+    '/health/sleep-schedule': {
+      get: {
+        description:
+          'Bedtime and wake time of each main sleep by local wake day, their mean and spread, and the latest Oura bedtime recommendation.',
+        requestParams: { query: sleepScheduleQuerySchema },
+        responses: {
+          200: {
+            content: { 'application/json': { schema: sleepScheduleResponseSchema } },
+            description: 'Successful response',
+          },
+          400: {
+            content: { 'application/json': { schema: errorResponseSchema } },
+            description: 'Invalid metric, range or timezone',
+          },
+        },
+        security: [{ bearerAuth: [] }],
+        summary: 'Get the sleep schedule',
+        tags: ['Health'],
+      },
+    },
+
+    '/health/tag-impact': {
+      get: {
+        description:
+          "For each Oura lifestyle tag, the next night's nightly HRV, sleep score and resting HR after tagged days against all other nights (Welch t-test, Cohen's d). Correlational.",
+        requestParams: { query: tagImpactQuerySchema },
+        responses: {
+          200: {
+            content: { 'application/json': { schema: tagImpactResponseSchema } },
+            description: 'Successful response',
+          },
+          400: {
+            content: { 'application/json': { schema: errorResponseSchema } },
+            description: 'Invalid metric, range or timezone',
+          },
+        },
+        security: [{ bearerAuth: [] }],
+        summary: 'Get lifestyle tag impact',
+        tags: ['Health'],
+      },
+    },
+
+    '/health/backfill-oura': {
+      post: {
+        description:
+          'Re-derive the Oura activity-score contributor metrics from the stored Oura daily_activity documents. Idempotent; makes no Oura API calls.',
+        responses: {
+          200: {
+            content: { 'application/json': { schema: ouraMetricBackfillResponseSchema } },
+            description: 'Successful response',
+          },
+        },
+        security: [{ bearerAuth: [] }],
+        summary: 'Backfill derived Oura metrics',
+        tags: ['Health'],
       },
     },
 
@@ -1499,6 +1610,10 @@ const openApiDocument = createDocument({
     { description: 'Named and detected locations', name: 'Locations' },
     { description: 'RescueTime productivity data', name: 'Productivity' },
     { description: 'User settings and preferences', name: 'Settings' },
+    {
+      description: 'Health dashboard: daily scores, personal baselines, sleep schedule, tag impact',
+      name: 'Health',
+    },
     {
       description: 'Data synchronization with external services',
       name: 'Sync',

@@ -112,6 +112,12 @@ export const validMetrics = [
   'stress_day_summary',
   'pulse_wave_velocity',
   'ring_battery_level',
+  'activity_stay_active',
+  'activity_move_every_hour',
+  'activity_meet_daily_targets',
+  'activity_training_frequency',
+  'activity_training_volume',
+  'activity_recovery_time',
 ] as const
 
 export const metricTypeSchema = z.enum(validMetrics).meta({
@@ -351,6 +357,12 @@ export const metricUnits: Record<MetricType, string> = {
   stress_day_summary: 'level',
   pulse_wave_velocity: 'm/s',
   ring_battery_level: '%',
+  activity_stay_active: 'score',
+  activity_move_every_hour: 'score',
+  activity_meet_daily_targets: 'score',
+  activity_training_frequency: 'score',
+  activity_training_volume: 'score',
+  activity_recovery_time: 'score',
 }
 
 export const metricAggregationSchema = z.enum(['avg', 'sum']).meta({
@@ -500,6 +512,21 @@ export const metricLabels: Record<string, string> = {
   stress_day_summary: 'Stress Day Summary',
   pulse_wave_velocity: 'Pulse Wave Velocity',
   ring_battery_level: 'Ring Battery',
+  activity_score: 'Activity Score',
+  hrv_sleep: 'Nightly HRV',
+  sleep_efficiency: 'Sleep: Efficiency Score',
+  sleep_latency: 'Sleep: Latency Score',
+  sleep_restfulness: 'Sleep: Restfulness Score',
+  sleep_timing: 'Sleep: Timing Score',
+  sleep_deep_score: 'Sleep: Deep Sleep Score',
+  sleep_rem_score: 'Sleep: REM Sleep Score',
+  sleep_total_score: 'Sleep: Total Sleep Score',
+  activity_stay_active: 'Activity: Stay Active',
+  activity_move_every_hour: 'Activity: Move Every Hour',
+  activity_meet_daily_targets: 'Activity: Meet Daily Targets',
+  activity_training_frequency: 'Activity: Training Frequency',
+  activity_training_volume: 'Activity: Training Volume',
+  activity_recovery_time: 'Activity: Recovery Time',
 }
 
 export const getMetricDisplayName = (metric: string): string => metricLabels[metric] ?? metric

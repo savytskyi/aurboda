@@ -251,6 +251,23 @@ const fieldFrom = (members: Activity[], key: string): { value: number; source: s
   return undefined
 }
 
+const intensities = new Set(['easy', 'moderate', 'hard'] as const)
+type Intensity = NonNullable<WorkoutSummary['intensity']>
+
+const intensityOf = (a: Activity): Intensity | undefined => {
+  const v = a.data?.intensity
+  return typeof v === 'string' && intensities.has(v as Intensity) ? (v as Intensity) : undefined
+}
+
+/** The representing row's source intensity label, else the first member's that has one. */
+export const workoutIntensity = (
+  members: Activity[],
+  representingId: string | undefined,
+): Intensity | undefined => {
+  const representing = members.find((m) => m.id === representingId)
+  return (representing && intensityOf(representing)) ?? members.map(intensityOf).find((v) => v !== undefined)
+}
+
 const coverageStatus = (sampleCount: number, coverage: number): WorkoutHeartRate['status'] =>
   sampleCount === 0 ? 'unavailable' : coverage < 0.5 ? 'sparse' : 'ok'
 
@@ -360,6 +377,7 @@ const buildWorkouts = async (
       hr_coverage: hr.coverage,
       hr_max: hr.max,
       id: winner.id!,
+      intensity: workoutIntensity(members, winner.id),
       member_ids: members.map((m) => m.id!),
       notes: noteText.length > 0 ? noteText : undefined,
       set_count: sets.length,

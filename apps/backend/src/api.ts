@@ -119,6 +119,7 @@ import {
 } from './services/followers.ts'
 import { type FollowActions, followActor, unfollowActor } from './services/following.ts'
 import { createGeocodeQueue } from './services/geocode-queue.ts'
+import { backfillOuraDerivedMetricsForUsers } from './services/health/index.ts'
 import { createInvitationAuth } from './services/invitation.ts'
 import { getPlaceVisits } from './services/locations.ts'
 import { createPgBoss } from './services/pg-boss.ts'
@@ -425,6 +426,7 @@ const main = async () => {
     if (trackBackfillQueue) {
       for (const user of await listUserNames(userDb)) await trackBackfillQueue.enqueue(user, 120)
     }
+    await backfillOuraDerivedMetricsForUsers(await listUserNames(userDb))
   })
 
   // CORS must come first for preflight requests

@@ -714,3 +714,17 @@ export {
   type WorkoutLinkRow,
   type WorkoutLinkStatus,
 } from './workouts.ts'
+export {
+  getDailyMetricValues,
+  getLatestOuraPersonalInfo,
+  getOuraDailyActivityPage,
+  getOuraDerivedBackfillCounts,
+  getOuraTagOccurrences,
+  getSleepSessionsEndingBetween,
+  getSleepTimeRecords,
+  type HealthDayValue,
+  type RawDailyActivityRow,
+  type SleepSessionRow,
+  type SleepTimeRecord,
+  type TagOccurrenceRow,
+} from './health.ts'

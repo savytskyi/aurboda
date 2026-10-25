@@ -62,6 +62,38 @@ describe('extended Oura processors', () => {
     )
   })
 
+  test('persists the six activity-score contributors, skipping nulls and unknown keys', async () => {
+    await processOuraData('ky_home', 'dailyActivity', [
+      {
+        contributors: {
+          meet_daily_targets: 60,
+          move_every_hour: 100,
+          recovery_time: 97,
+          stay_active: 78,
+          training_frequency: null,
+          training_volume: 100,
+          unknown_future_key: 5,
+        },
+        day: '2026-10-24',
+        id: 'activity-2026-10-24',
+        score: 86,
+      },
+    ])
+
+    const values = metricValues()
+    expect(values).toEqual(
+      expect.arrayContaining([
+        ['activity_meet_daily_targets', 60],
+        ['activity_move_every_hour', 100],
+        ['activity_recovery_time', 97],
+        ['activity_stay_active', 78],
+        ['activity_training_volume', 100],
+      ]),
+    )
+    expect(values.map(([metric]) => metric)).not.toContain('activity_training_frequency')
+    expect(values.map(([metric]) => metric)).not.toContain('unknown_future_key')
+  })
+
   test('persists stress, recovery, SpO2, and breathing disturbance', async () => {
     await processOuraData('ky_home', 'dailyStress', [
       { day: '2026-10-18', id: 'stress-1', recovery_high: 7_200, stress_high: 5_400 },

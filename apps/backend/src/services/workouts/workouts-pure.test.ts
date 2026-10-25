@@ -7,7 +7,7 @@ import type { Activity } from '../../db/types.ts'
 import { mergeOverlappingActivities } from '../../db/activities/merge.ts'
 import { humanizeOuraActivity, ouraWorkoutActivityType } from '../../integrations/oura/workout-types.ts'
 import { rankCandidates, scoreMatch, AUTO_LINK_CONFIDENCE } from './matching.ts'
-import { appendSets, formatWorkoutReply, resolveEntryTime } from './service.ts'
+import { appendSets, formatWorkoutReply, resolveEntryTime, workoutIntensity } from './service.ts'
 import {
   buildProgress,
   estimatedOneRepMax,
@@ -461,5 +461,28 @@ describe('buildProgress', () => {
     const p = buildProgress({ key: 'deadlift', name: 'Deadlift' }, [], tz)
     expect(p.sessions).toEqual([])
     expect(p.prs).toEqual({ best_e1rm: undefined, best_volume_session: undefined, heaviest_set: undefined })
+  })
+})
+
+describe('workoutIntensity', () => {
+  const member = (id: string, intensity?: unknown): Activity => ({
+    activity_type: 'running',
+    data: intensity === undefined ? {} : { intensity },
+    id,
+    source: 'oura',
+    start_time: t('2026-10-22T16:00:00Z'),
+  })
+
+  it("takes the representing row's label", () => {
+    expect(workoutIntensity([member('a', 'moderate'), member('b', 'hard')], 'b')).toBe('hard')
+  })
+
+  it('falls back to the first member that has one', () => {
+    expect(workoutIntensity([member('a'), member('b', 'easy'), member('c', 'hard')], 'a')).toBe('easy')
+  })
+
+  it('omits unknown or missing labels', () => {
+    expect(workoutIntensity([member('a', 'extreme'), member('b', 3)], 'a')).toBeUndefined()
+    expect(workoutIntensity([member('a')], 'a')).toBeUndefined()
   })
 })

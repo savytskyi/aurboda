@@ -46,6 +46,7 @@ import { createFeedImageRouter } from '../routes/feed-image-router.ts'
 import { createFeedPublicRouter } from '../routes/feed-public-router.ts'
 import { createFeedRouter, type FeedDeliver } from '../routes/feed-router.ts'
 import { createFoodItemsRouter } from '../routes/food-items-router.ts'
+import { createHealthRouter } from '../routes/health-router.ts'
 import { createIconsRouter } from '../routes/icons-router.ts'
 import { createImportsRouter } from '../routes/imports-router.ts'
 import { createLocationsRouter } from '../routes/locations-router.ts'
@@ -185,6 +186,7 @@ export const mountRestRouters = ({
     ),
   )
   httpd.use('/workouts', createWorkoutsRouter(authMiddleware))
+  httpd.use('/health', createHealthRouter(authMiddleware))
   httpd.use('/productivity', createProductivityRouter(authMiddleware, syncProvider))
   httpd.use('/activity-types', createActivityTypesRouter(authMiddleware))
   httpd.use(

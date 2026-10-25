@@ -28,6 +28,7 @@ import {
 import { auditError } from '../../services/audit-log.ts'
 import { STRENGTH_TYPES } from '../../services/workouts/matching.ts'
 import { reconcileStrengthWorkouts } from '../../services/workouts/service.ts'
+import { pushAll } from '../../utils.ts'
 import { humanizeOuraActivity, ouraWorkoutActivityType } from './workout-types.ts'
 
 export type OuraDataType =
@@ -115,6 +116,7 @@ interface OuraDailyActivity extends OuraDailyRecord {
   target_calories?: number
   target_meters?: number
   total_calories?: number
+  contributors?: Record<string, number | null>
 }
 
 interface OuraDailyStress extends OuraDailyRecord {
@@ -219,9 +221,40 @@ const processDailyActivity = async (user: string, data: OuraDailyActivity[]) => 
       source: 'oura',
     })
     for (const [field, metric] of metricMap) pushMetric(points, metric, record[field] as number, time)
+    pushAll(points, activityContributorPoints(record, time))
   }
   await insertTimeSeries(user, points)
 }
+
+const activityContributorMetricMap: Record<string, MetricType> = {
+  meet_daily_targets: 'activity_meet_daily_targets',
+  move_every_hour: 'activity_move_every_hour',
+  recovery_time: 'activity_recovery_time',
+  stay_active: 'activity_stay_active',
+  training_frequency: 'activity_training_frequency',
+  training_volume: 'activity_training_volume',
+}
+
+/**
+ * The six activity-score contributors (0-100 each) of one daily_activity
+ * document. Shared with the raw-record backfill so stored history and new
+ * syncs produce identical points.
+ */
+export const activityContributorPoints = (
+  record: { contributors?: Record<string, number | null> },
+  time: Date,
+): TimeSeriesPoint[] => {
+  const points: TimeSeriesPoint[] = []
+  for (const [key, value] of Object.entries(record.contributors ?? {})) {
+    const metric = activityContributorMetricMap[key]
+    if (metric) pushMetric(points, metric, value, time)
+  }
+  return points
+}
+
+/** Time a daily Oura document is stamped at (exported for the raw-record backfill). */
+export const ouraDailyRecordTime = (record: { day?: string; timestamp?: string }): Date =>
+  dailyRecordTime({ id: '', ...record })
 
 const processDailyStress = async (user: string, data: OuraDailyStress[]) => {
   const points: TimeSeriesPoint[] = []

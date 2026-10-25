@@ -10,18 +10,20 @@ A workout is an ordinary [activity](./activity-types.md). There is no parallel w
 
 Manually logged strength sets live on an `aurboda` activity of type `strength_training` with `data.manual_strength = true` and `external_id = manual-strength-<id>`. The sets use the [Gravl set shape](../gravl.md#the-set-shape) so manual and Gravl sets read the same everywhere:
 
-| Field                          | Meaning                                                                                  |
-| ------------------------------ | ---------------------------------------------------------------------------------------- |
-| `set_id`                       | Stable id, used to edit or delete one set                                                |
-| `exercise`, `exercise_key`     | Display name and stable key from the exercise catalog                                    |
-| `exercise_order`, `order`      | Position of the exercise in the workout, and of the set within its exercise              |
-| `weight`                       | Kilograms of external load. Pounds are converted on entry. `null` = not given            |
-| `bodyweight`                   | Bodyweight movement; `weight` is then the added load (0 = none)                          |
-| `reps`, `time`, `distance`     | Repetitions; seconds for timed sets; metres                                              |
-| `rpe`, `set_type`, `notes`     | `set_type` is `normal` (working), `warmup`, `drop_set` or `failure`                       |
-| `logged_at`, `logged_via`      | When and through which channel (`hermes`, `web`, `api`, `mcp`) the set was logged         |
+| Field                      | Meaning                                                                           |
+| -------------------------- | --------------------------------------------------------------------------------- |
+| `set_id`                   | Stable id, used to edit or delete one set                                         |
+| `exercise`, `exercise_key` | Display name and stable key from the exercise catalog                             |
+| `exercise_order`, `order`  | Position of the exercise in the workout, and of the set within its exercise       |
+| `weight`                   | Kilograms of external load. Pounds are converted on entry. `null` = not given     |
+| `bodyweight`               | Bodyweight movement; `weight` is then the added load (0 = none)                   |
+| `reps`, `time`, `distance` | Repetitions; seconds for timed sets; metres                                       |
+| `rpe`, `set_type`, `notes` | `set_type` is `normal` (working), `warmup`, `drop_set` or `failure`               |
+| `logged_at`, `logged_via`  | When and through which channel (`hermes`, `web`, `api`, `mcp`) the set was logged |
 
 The activity also records `entry_channel`, `time_source` (`explicit`, `message_time`, `date_only` or `linked`), `message_time` and `last_logged_at`.
+
+A workout summary carries `intensity` (`easy`, `moderate` or `hard`) when a source labels the session: Oura stores its own label in `data.intensity`. The representing row's label wins; otherwise the first merged member that has one. Any other value is left out.
 
 ### Exercise catalog
 
@@ -31,13 +33,13 @@ Names resolve through aliases to one key: `bench`, `bench press`, `barbell bench
 
 Strength sessions entered in the Oura app and the sets sent afterwards are joined by a **link** (`workout_links`): a confirmed link makes the merge treat the two rows as one workout. The manual row ranks higher, so the workout shows the logged sets, and Oura's calories, times and heart rate fill in what the manual row lacks. Neither side's data is overwritten: an Oura resync updates only the Oura row, and the sets stay on the manual row.
 
-| Case                              | Result                                                                                          |
-| --------------------------------- | ----------------------------------------------------------------------------------------------- |
-| Oura first, sets later            | Linked when the sets are logged; one workout                                                    |
-| Sets first, Oura later            | Linked when the Oura sync imports the session; one workout                                      |
-| Sets only                         | A complete strength workout; heart rate and calories are absent, not estimated                  |
-| Oura only                         | The session, marked _sets not logged_ (not "zero sets")                                         |
-| Two sessions on one day           | Each set log joins at most one session; unrelated sessions are never merged                     |
+| Case                    | Result                                                                         |
+| ----------------------- | ------------------------------------------------------------------------------ |
+| Oura first, sets later  | Linked when the sets are logged; one workout                                   |
+| Sets first, Oura later  | Linked when the Oura sync imports the session; one workout                     |
+| Sets only               | A complete strength workout; heart rate and calories are absent, not estimated |
+| Oura only               | The session, marked _sets not logged_ (not "zero sets")                        |
+| Two sessions on one day | Each set log joins at most one session; unrelated sessions are never merged    |
 
 ### Matching
 
@@ -67,19 +69,19 @@ For a selected exercise and period (30 days to all time): estimated 1RM (Epley, 
 
 All endpoints require authentication and act on the authenticated user's own database. Workout title, times and notes are edited with `PATCH /activities/:id`, and a workout is deleted with `DELETE /activities/:id`.
 
-| Method and path                         | MCP tool                | Purpose                                                    |
-| --------------------------------------- | ----------------------- | ---------------------------------------------------------- |
-| `GET /workouts?start&end&types&tz`      | `list_workouts`         | Merged workouts in a range (default: last 30 days)         |
-| `GET /workouts/:id`                     | `get_workout`           | Sets, exercises, provenance, HR, links and suggestions     |
-| `POST /workouts/strength`               | `log_strength_workout`  | Log sets from `text` or `exercises`; idempotent by key     |
-| `POST /workouts/strength/parse`         | `parse_strength_text`   | Parse only, write nothing                                  |
-| `PATCH /workouts/:id/sets/:setId`       | `update_strength_set`   | Correct one set                                            |
-| `DELETE /workouts/:id/sets/:setId`      | `delete_strength_set`   | Delete one set                                             |
-| `POST /workouts/:id/links`              | `link_workouts`         | Confirm two activities are one workout                     |
-| `DELETE /workouts/:id/links/:linkedId`  | `unlink_workouts`       | Separate them for good                                     |
-| `GET /workouts/exercises`               | `list_exercises`        | Exercise catalog with logged-set counts                    |
-| `POST /workouts/exercises`              | `add_exercise`          | Custom exercise or aliases                                 |
-| `GET /workouts/strength/progress`       | `strength_progress`     | Progression, PRs and raw sets of one exercise              |
+| Method and path                        | MCP tool               | Purpose                                                |
+| -------------------------------------- | ---------------------- | ------------------------------------------------------ |
+| `GET /workouts?start&end&types&tz`     | `list_workouts`        | Merged workouts in a range (default: last 30 days)     |
+| `GET /workouts/:id`                    | `get_workout`          | Sets, exercises, provenance, HR, links and suggestions |
+| `POST /workouts/strength`              | `log_strength_workout` | Log sets from `text` or `exercises`; idempotent by key |
+| `POST /workouts/strength/parse`        | `parse_strength_text`  | Parse only, write nothing                              |
+| `PATCH /workouts/:id/sets/:setId`      | `update_strength_set`  | Correct one set                                        |
+| `DELETE /workouts/:id/sets/:setId`     | `delete_strength_set`  | Delete one set                                         |
+| `POST /workouts/:id/links`             | `link_workouts`        | Confirm two activities are one workout                 |
+| `DELETE /workouts/:id/links/:linkedId` | `unlink_workouts`      | Separate them for good                                 |
+| `GET /workouts/exercises`              | `list_exercises`       | Exercise catalog with logged-set counts                |
+| `POST /workouts/exercises`             | `add_exercise`         | Custom exercise or aliases                             |
+| `GET /workouts/strength/progress`      | `strength_progress`    | Progression, PRs and raw sets of one exercise          |
 
 ### Logging sets
 

@@ -219,6 +219,10 @@ export const workoutSummarySchema = z
       .optional()
       .meta({ description: "The workout type's icon: an emoji or an uploaded icon path" }),
     id: z.string().meta({ description: 'Activity id of the row that represents the merged workout' }),
+    intensity: z
+      .enum(['easy', 'moderate', 'hard'])
+      .optional()
+      .meta({ description: "The source's own intensity label (Oura), when it gives one" }),
     member_ids: z.array(z.string()),
     notes: z.string().optional(),
     set_count: z.number().int(),
