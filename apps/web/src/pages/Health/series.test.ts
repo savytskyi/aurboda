@@ -2,7 +2,7 @@ import type { HealthDailyPoint } from '@aurboda/api-spec'
 
 import { describe, expect, it } from 'vitest'
 
-import { latestDate, latestDelta, latestPoint, rangeAverage, valueOn } from './series'
+import { latestDate, latestDelta, latestPoint, rangeAverage, splitToday, valueOn } from './series'
 
 const p = (date: string, value: number, mean?: number): HealthDailyPoint => ({
   baseline: mean === undefined ? null : { mean, n: 30, sd: 2 },
@@ -35,5 +35,20 @@ describe('series helpers', () => {
   it('finds the latest day across series', () => {
     expect(latestDate([points, [p('2026-10-03', 1)], undefined])).toBe('2026-10-03')
     expect(latestDate([[], undefined])).toBeNull()
+  })
+})
+
+describe('splitToday', () => {
+  const pts = [
+    { baseline: null, date: '2026-10-24', value: 9000 },
+    { baseline: null, date: '2026-10-25', value: 1668 },
+  ]
+  it('holds back today for accumulating totals', () => {
+    const { complete, today } = splitToday(pts, '2026-10-25', true)
+    expect(complete.map((point) => point.date)).toEqual(['2026-10-24'])
+    expect(today?.value).toBe(1668)
+  })
+  it('keeps every day for level metrics', () => {
+    expect(splitToday(pts, '2026-10-25', false)).toEqual({ complete: pts, today: null })
   })
 })

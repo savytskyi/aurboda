@@ -23,3 +23,20 @@ export const latestDate = (seriesList: readonly (readonly HealthDailyPoint[] | u
     const date = latestPoint(points)?.date ?? null
     return date !== null && (max === null || date > max) ? date : max
   }, null)
+
+/**
+ * Separate today's still-accumulating value (steps, calories, stress minutes)
+ * from the complete days, so a half-finished day is neither charted against
+ * full days nor compared with the normal.
+ */
+export const splitToday = (
+  points: readonly HealthDailyPoint[],
+  today: string,
+  accumulating: boolean,
+): { complete: HealthDailyPoint[]; today: HealthDailyPoint | null } => {
+  if (!accumulating) return { complete: [...points], today: null }
+  return {
+    complete: points.filter((p) => p.date < today),
+    today: points.find((p) => p.date === today) ?? null,
+  }
+}

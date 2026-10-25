@@ -114,20 +114,29 @@ Shared conventions:
 
 ### Overview (`/`)
 
-One request (`/health/overview`). Top to bottom:
+A dashboard of every main stat with its last-30-day trend. Two requests: `/health/overview` for the summary, then one
+`/health/daily` call for the 30-day history behind every sparkline. Top to bottom:
 
 - **Today** with the long date and whether last night's sleep is recorded.
 - Three **score cards** — Readiness (→ Recovery), Sleep (→ Sleep), Activity (→ Activity) — with the value, its delta
-  vs the 30-day normal and one context line: the weakest readiness contributor (or "All contributors in good
-  shape"), sleep duration and efficiency, steps and the share of Oura's daily target. A value from an earlier day
-  says so ("from Oct 22").
-- Four **recovery signals** (nightly HRV, resting HR, temperature deviation, respiratory rate), each linking to its
-  chart on Recovery, with the normal range and a chip: Normal, Above/Below normal (good when the direction is
-  favourable, otherwise Watch), Building baseline, or No data.
-- A compact **stress & resilience** card: high-stress vs restorative time as one split bar ("so far today" while
-  the day is running), the latest day summary, and the resilience level with its change over two weeks.
+  vs the 30-day normal, one context line (the weakest readiness contributor, sleep duration and efficiency, steps
+  and the share of Oura's daily target) and a 30-day sparkline over the personal-normal band. A value from an
+  earlier day says so ("from Oct 22"). Deltas within half a standard deviation of the normal stay uncoloured.
 - Up to three **insights** (see [Insights](#insights)), or "Nothing unusual" when there are none.
-- The consumer-wearable note and a link to the customizable dashboard.
+- **Last night & recovery**: the dashboard's Last night widget (stage strip, resting HR and HRV) beside the four
+  recovery signals (nightly HRV, resting HR, temperature deviation, respiratory rate), each with its normal range,
+  a status chip and a sparkline, linking to its chart on Recovery.
+- **Trends**: total sleep, sleep efficiency, steps, active calories, high stress, restorative time, resilience and
+  SpO₂, each with its latest value, delta vs normal and a sparkline. Daily totals that accumulate during the day
+  (steps, active calories, stress and restorative time) show the last complete day and a separate "Today so far"
+  line, so a half-finished day is never compared with full days.
+- A compact **stress & resilience** card: today's high-stress vs restorative split, the latest day summary and the
+  resilience level with its change over two weeks.
+- **Activity**: the dashboard's 7-day activity summary, the 30-day workout calendar, weekly Zone 2 minutes and
+  7-day HR zones.
+- The consumer-wearable note and a link to the customizable dashboard (`/dashboard`).
+
+Every sparkline has a hover/keyboard tooltip with the day's value and normal range.
 
 ### Recovery (`/health/recovery`, 7 / 30 / 90 days / 1 year)
 
