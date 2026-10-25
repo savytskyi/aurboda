@@ -111,3 +111,55 @@ export const intensityCountsText = (byIntensity: WorkoutTotals['byIntensity']): 
     .map((k) => `${byIntensity[k]} ${k}`)
   return parts.length > 0 ? parts.join(' · ') : null
 }
+
+export interface WorkoutTypeSeries {
+  key: string
+  label: string
+  /** Running total of seconds per day, one point per day in the range. */
+  points: HealthDailyPoint[]
+  totalSec: number
+}
+
+/**
+ * Cumulative training time per workout type over `days`: the most-trained
+ * `topN` types keep their own line, the rest are summed as "Other". A running
+ * total reads at a glance as "how much of each so far", where daily minutes
+ * would be a row of spikes.
+ */
+export const cumulativeMinutesByType = (
+  workouts: readonly WorkoutSummary[],
+  days: readonly string[],
+  dayOf: (iso: string) => string,
+  topN = 5,
+): WorkoutTypeSeries[] => {
+  const inRange = new Set(days)
+  const perType = new Map<string, { label: string; byDay: Map<string, number>; total: number }>()
+  for (const w of workouts) {
+    const day = dayOf(w.start_time)
+    const sec = (w.duration_min ?? 0) * 60
+    if (!inRange.has(day) || sec <= 0) continue
+    const entry = perType.get(w.activity_type) ?? { byDay: new Map(), label: w.display_name, total: 0 }
+    entry.byDay.set(day, (entry.byDay.get(day) ?? 0) + sec)
+    entry.total += sec
+    perType.set(w.activity_type, entry)
+  }
+  const ranked = [...perType.entries()].sort((a, b) => b[1].total - a[1].total)
+  const kept = ranked.slice(0, topN)
+  const rest = ranked.slice(topN)
+  if (rest.length > 0) {
+    const other = { byDay: new Map<string, number>(), label: 'Other', total: 0 }
+    for (const [, e] of rest) {
+      for (const [day, sec] of e.byDay) other.byDay.set(day, (other.byDay.get(day) ?? 0) + sec)
+      other.total += e.total
+    }
+    kept.push(['other', other])
+  }
+  return kept.map(([key, e]) => {
+    let running = 0
+    const points = days.map((date) => {
+      running += e.byDay.get(date) ?? 0
+      return { baseline: null, date, value: running }
+    })
+    return { key, label: e.label, points, totalSec: e.total }
+  })
+}

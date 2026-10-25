@@ -1,11 +1,15 @@
-import { useEffect, useRef, useState } from 'preact/hooks'
+import { useEffect, useState } from 'preact/hooks'
 
+/**
+ * Width of the element the returned callback ref is attached to. A callback
+ * ref (not a ref object) so an element that mounts later — after a loading
+ * placeholder — is still measured.
+ */
 export const useContainerWidth = <T extends HTMLElement>() => {
-  const ref = useRef<T>(null)
+  const [el, setEl] = useState<T | null>(null)
   const [width, setWidth] = useState(0)
 
   useEffect(() => {
-    const el = ref.current
     if (!el) return
     setWidth(el.clientWidth)
     if (typeof ResizeObserver === 'undefined') return
@@ -15,7 +19,7 @@ export const useContainerWidth = <T extends HTMLElement>() => {
     })
     observer.observe(el)
     return () => observer.disconnect()
-  }, [])
+  }, [el])
 
-  return [ref, width] as const
+  return [setEl, width] as const
 }

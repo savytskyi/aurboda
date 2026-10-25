@@ -6,7 +6,7 @@ import type {
   HealthStressSummary,
 } from '@aurboda/api-spec'
 
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 
 import {
   ActivitySummaryWidget,
@@ -15,13 +15,16 @@ import {
   MetricCardWidget,
   WorkoutCalendarWidget,
 } from '../../components/widgets'
-import { fetchHealthOverview } from '../../state/api'
+import { fetchHealthOverview, fetchWorkouts } from '../../state/api'
 import '../Dashboard/style.css'
+import { cumulativeMinutesByType } from './activityModel'
 import {
   addDays,
   baselineDeltaTone,
   dayString,
   formatDelta,
+  formatDuration,
+  parseDay,
   formatMetricValue,
   longDate,
   metricLabel,
@@ -45,6 +48,8 @@ import { Sparkline } from './Sparkline'
 import { StatusChip } from './StatusChip'
 import { resilienceLevelOf } from './stressModel'
 import { StressSplitBar } from './StressSplitBar'
+import { TrendChart } from './TrendChart'
+import { daysBetween } from './trendChartUtils'
 import { useHealthDaily } from './useHealthDaily'
 import './health.css'
 import './overview.css'
@@ -276,6 +281,59 @@ function StressCard({ date, stress }: { date: string; stress: HealthStressSummar
   )
 }
 
+const WORKOUT_COLORS = [
+  'var(--h-series-1)',
+  'var(--h-series-2)',
+  'var(--h-series-3)',
+  'var(--h-series-4)',
+  'var(--h-series-5)',
+  'var(--h-series-6)',
+]
+
+function WorkoutMinutesCard({ start, end }: { start: string; end: string }) {
+  const query = useQuery({
+    placeholderData: keepPreviousData,
+    queryFn: () => fetchWorkouts(parseDay(start), parseDay(addDays(end, 1))),
+    queryKey: ['workouts', start, end],
+  })
+  const byType = cumulativeMinutesByType(query.data ?? [], daysBetween(start, end), (iso) =>
+    dayString(new Date(iso)),
+  )
+  return (
+    <section class="health-card overview-workout-minutes">
+      <div class="health-card-header">
+        <div>
+          <h3>Workout time by type</h3>
+          <span class="health-muted">Running total over the last {TREND_DAYS} days</span>
+        </div>
+        <a class="health-link" href="/workouts">
+          Workouts →
+        </a>
+      </div>
+      {byType.length === 0 ? (
+        <p class="health-muted">
+          {query.isLoading ? 'Loading workouts…' : 'No workouts in the last 30 days.'}
+        </p>
+      ) : (
+        <TrendChart
+          band={false}
+          start={start}
+          end={end}
+          height={220}
+          series={byType.map((t, i) => ({
+            color: WORKOUT_COLORS[i] ?? 'var(--h-series-1)',
+            key: t.key,
+            label: `${t.label} · ${formatDuration(t.totalSec)}`,
+            // Any duration metric: the chart formats the seconds as hours and minutes.
+            metric: 'medium_activity_time_sec',
+            points: t.points,
+          }))}
+        />
+      )}
+    </section>
+  )
+}
+
 function Insights({ data }: { data: HealthOverviewData }) {
   if (data.insights.length === 0) {
     return (
@@ -351,6 +409,7 @@ function OverviewBody({ data, range }: { data: HealthOverviewData; range: TrendR
 
       <section>
         <h2>Activity</h2>
+        <WorkoutMinutesCard start={range.start} end={range.end} />
         <div class="dashboard overview-widgets">
           <ActivitySummaryWidget config={{ lookback_days: 7 }} />
         </div>

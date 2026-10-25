@@ -3,6 +3,7 @@ import type { GoalProgress, HealthDailyPoint, WorkoutSummary } from '@aurboda/ap
 import { describe, expect, it } from 'vitest'
 
 import {
+  cumulativeMinutesByType,
   dailyTargetProgress,
   intensityCountsText,
   stepsGoalPerDay,
@@ -112,5 +113,57 @@ describe('workoutTotals', () => {
     expect(totals.strength).toEqual({ logged: 1, sessions: 2, sets: 12, volumeKg: 4200 })
     expect(intensityCountsText(totals.byIntensity)).toBe('1 hard · 1 moderate')
     expect(intensityCountsText({ easy: 0, hard: 0, moderate: 0, unlabelled: 3 })).toBeNull()
+  })
+})
+
+describe('cumulativeMinutesByType', () => {
+  const w = (activity_type: string, start_time: string, duration_min: number): WorkoutSummary =>
+    ({
+      activity_type,
+      color: '#000',
+      display_name: activity_type.charAt(0).toUpperCase() + activity_type.slice(1),
+      duration_min,
+      exercise_count: 0,
+      id: `${activity_type}-${start_time}`,
+      member_ids: [],
+      set_count: 0,
+      sets_status: 'not_applicable',
+      sources: ['oura'],
+      start_time,
+      volume_kg: 0,
+    }) as WorkoutSummary
+  const days = ['2026-10-01', '2026-10-02', '2026-10-03']
+  const dayOf = (iso: string) => iso.slice(0, 10)
+
+  it('keeps a running total per type, most-trained first, one point per day', () => {
+    const series = cumulativeMinutesByType(
+      [
+        w('walking', '2026-10-01T08:00:00Z', 20),
+        w('walking', '2026-10-03T08:00:00Z', 10),
+        w('running', '2026-10-02T08:00:00Z', 45),
+        w('running', '2026-09-30T08:00:00Z', 99),
+      ],
+      days,
+      dayOf,
+    )
+    expect(series.map((s) => s.key)).toEqual(['running', 'walking'])
+    expect(series[0]!.points.map((p) => p.value)).toEqual([0, 2700, 2700])
+    expect(series[1]!.points.map((p) => p.value)).toEqual([1200, 1200, 1800])
+    expect(series[1]!.totalSec).toBe(1800)
+  })
+
+  it('folds types beyond the top N into Other', () => {
+    const series = cumulativeMinutesByType(
+      [
+        w('a', '2026-10-01T08:00:00Z', 30),
+        w('b', '2026-10-01T08:00:00Z', 20),
+        w('c', '2026-10-02T08:00:00Z', 10),
+      ],
+      days,
+      dayOf,
+      1,
+    )
+    expect(series.map((s) => s.label)).toEqual(['A', 'Other'])
+    expect(series[1]!.points.map((p) => p.value)).toEqual([1200, 1800, 1800])
   })
 })

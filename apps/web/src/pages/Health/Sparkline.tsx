@@ -92,7 +92,11 @@ export function Sparkline({
   const cursor = useChartCursor(hoverDays.length)
 
   if (points.length < 2 || !model.domain) {
-    return <div class="health-spark-empty" style={{ height: `${height}px` }} />
+    return (
+      <div ref={ref} class="health-spark">
+        <div class="health-spark-empty" style={{ height: `${height}px` }} />
+      </div>
+    )
   }
 
   const x = sparkX(model.days, width)

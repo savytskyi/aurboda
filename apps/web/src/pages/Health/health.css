@@ -38,6 +38,8 @@
   --h-series-2: #eb6834;
   --h-series-3: #1baf7a;
   --h-series-4: #eda100;
+  --h-series-5: #e87ba4;
+  --h-series-6: #008300;
   --h-stage-deep: var(--h-series-1);
   --h-stage-light: #86b6ef;
   --h-stage-rem: var(--h-series-3);
@@ -94,6 +96,8 @@
     --h-series-2: #d95926;
     --h-series-3: #199e70;
     --h-series-4: #c98500;
+    --h-series-5: #d55181;
+    --h-series-6: #008300;
     --h-stage-light: #1c5cab;
     --h-optimal-key: rgba(25, 158, 112, 0.15);
     --h-dur-good: #0ca30c;

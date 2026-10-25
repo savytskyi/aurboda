@@ -132,6 +132,8 @@ A dashboard of every main stat with its last-30-day trend. Two requests: `/healt
   line, so a half-finished day is never compared with full days.
 - A compact **stress & resilience** card: today's high-stress vs restorative split, the latest day summary and the
   resilience level with its change over two weeks.
+- **Workout time by type**: one line per workout type (the five most-trained, the rest as Other) showing the
+  running total of minutes over the last 30 days, with each type's total in the legend.
 - **Activity**: the dashboard's 7-day activity summary, the 30-day workout calendar, weekly Zone 2 minutes and
   7-day HR zones.
 - The consumer-wearable note and a link to the customizable dashboard (`/dashboard`).

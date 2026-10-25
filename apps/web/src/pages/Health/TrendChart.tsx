@@ -14,8 +14,10 @@ import {
   XAxisLabels,
   YGrid,
 } from './chartParts'
+import { unitTicks } from './dailyBarUtils'
 import {
   axisTickLabel,
+  metricUnit,
   formatMetricRange,
   formatMetricValue,
   normalBounds,
@@ -35,7 +37,10 @@ import { useContainerWidth } from './useContainerWidth'
 import './health.css'
 
 export interface TrendSeries {
+  /** Unit and formatting come from this metric. */
   metric: string
+  /** Identity of the line when several share a metric; defaults to `metric`. */
+  key?: string
   label: string
   color: string
   points: HealthDailyPoint[]
@@ -117,7 +122,7 @@ function Legend({ series, showBand, smooth }: { series: TrendSeries[]; showBand:
       )}
       {series.length >= 2 &&
         series.map((s) => (
-          <span key={s.metric} class="health-legend-item">
+          <span key={s.key ?? s.metric} class="health-legend-item">
             <span class="health-line-key" style={{ background: s.color }} />
             {s.label}
           </span>
@@ -241,7 +246,7 @@ function Crosshair({
         const p = byDate[si]?.get(day)
         return p ? (
           <circle
-            key={s.metric}
+            key={s.key ?? s.metric}
             cx={cx}
             cy={scales.y(p.value)}
             r={4}
@@ -276,7 +281,7 @@ function TooltipRows({
         const p = byDate[si]?.get(day)
         const baseline = showBand ? p?.baseline : null
         return (
-          <div key={s.metric} class="health-tooltip-row">
+          <div key={s.key ?? s.metric} class="health-tooltip-row">
             <span class="health-line-key" style={{ background: s.color }} />
             <strong>{formatMetricValue(s.metric, p?.value ?? null)}</strong>
             <span class="health-tooltip-label">{s.label}</span>
@@ -328,6 +333,7 @@ function TrendPlot({
   scales,
   xScale,
   yScale,
+  yTicks,
   width,
   height,
   zeroLine,
@@ -343,6 +349,7 @@ function TrendPlot({
   scales: Scales
   xScale: d3.ScaleTime<number, number>
   yScale: d3.ScaleLinear<number, number>
+  yTicks: number[]
   width: number
   height: number
   zeroLine: boolean
@@ -356,12 +363,7 @@ function TrendPlot({
   return (
     <svg width={width} height={height} aria-hidden="true">
       <g transform={`translate(${CHART_MARGIN.left},${CHART_MARGIN.top})`}>
-        <YGrid
-          ticks={yScale.ticks(4)}
-          yOf={yScale}
-          width={innerWidth}
-          label={(v) => axisTickLabel(axisMetric, v)}
-        />
+        <YGrid ticks={yTicks} yOf={yScale} width={innerWidth} label={(v) => axisTickLabel(axisMetric, v)} />
         <XAxisLabels
           ticks={timeTicks(xScale, model.days.length, innerWidth)}
           xOf={xScale}
@@ -369,16 +371,16 @@ function TrendPlot({
           format={timeTickFormat(model.days.length)}
         />
         {model.segments.map((segs, si) => (
-          <Band key={series[si]?.metric} segments={segs} scales={scales} />
+          <Band key={series[si]?.key ?? series[si]?.metric} segments={segs} scales={scales} />
         ))}
         {zeroLine && (
           <line x1={0} x2={innerWidth} y1={yScale(0)} y2={yScale(0)} style={{ stroke: AXIS_TEXT_COLOR }} />
         )}
         {referenceLine && <ReferenceLine line={referenceLine} scales={scales} />}
-        {smooth && series.map((s) => <RawDots key={s.metric} series={s} scales={scales} />)}
+        {smooth && series.map((s) => <RawDots key={s.key ?? s.metric} series={s} scales={scales} />)}
         {model.lines.map((s, si) => (
           <SeriesLine
-            key={s.metric}
+            key={s.key ?? s.metric}
             series={s}
             rows={model.days.map((day) => model.lineByDate[si]?.get(day) ?? null)}
             scales={scales}
@@ -397,6 +399,17 @@ function TrendPlot({
       </g>
     </svg>
   )
+}
+
+/** y scale and ticks: whole hours for durations stored in seconds, else d3's nice ticks. */
+const buildYScale = (domain: [number, number] | null, metric: string, innerHeight: number) => {
+  const durationTicks = domain && metricUnit(metric) === 'sec' ? unitTicks(domain[0], domain[1], 3600) : null
+  const yScale = d3
+    .scaleLinear()
+    .domain(durationTicks ? [durationTicks[0]!, durationTicks.at(-1)!] : (domain ?? [0, 1]))
+    .range([innerHeight, 0])
+  if (!durationTicks) yScale.nice(4)
+  return { yScale, yTicks: durationTicks ?? yScale.ticks(4) }
 }
 
 export function TrendChart({
@@ -425,11 +438,7 @@ export function TrendChart({
     .scaleTime()
     .domain([parseDay(start), parseDay(end)])
     .range([0, innerWidth])
-  const yScale = d3
-    .scaleLinear()
-    .domain(model.domain ?? [0, 1])
-    .nice(4)
-    .range([innerHeight, 0])
+  const { yScale, yTicks } = buildYScale(model.domain, series[0]?.metric ?? '', innerHeight)
   const scales: Scales = { innerHeight, innerWidth, x: (day) => xScale(parseDay(day)), y: yScale }
   const hoverDay = cursor.index === null ? null : (model.hoverDates[cursor.index] ?? null)
 
@@ -455,6 +464,7 @@ export function TrendChart({
             scales={scales}
             xScale={xScale}
             yScale={yScale}
+            yTicks={yTicks}
             width={width}
             height={height}
             zeroLine={zeroLine}
