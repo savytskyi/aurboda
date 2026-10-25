@@ -819,6 +819,10 @@ a.meal-name:hover {
     color: #9ca3af;
   }
 
+  .config-hint a {
+    color: #a78bfa;
+  }
+
   .log-completion {
     background: #1f2937;
     border-color: #374151;

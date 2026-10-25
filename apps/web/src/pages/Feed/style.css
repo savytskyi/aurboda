@@ -397,3 +397,33 @@
     border-color: #374151;
   }
 }
+
+.following-form .btn-primary {
+  background: #673ab8;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.4rem 0.9rem;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.following-form .btn-primary:disabled {
+  background: #e5e7eb;
+  color: #4b5563;
+  cursor: not-allowed;
+}
+
+@media (prefers-color-scheme: dark) {
+  .following-form .btn-primary {
+    background: #a78bfa;
+    color: #111827;
+  }
+
+  .following-form .btn-primary:disabled {
+    background: #374151;
+    color: #9ca3af;
+  }
+}

@@ -140,6 +140,10 @@
     color: #f9fafb;
   }
 
+  .reports-empty a {
+    color: #a78bfa;
+  }
+
   .reports-filter select {
     background: #111827;
     border-color: #4b5563;

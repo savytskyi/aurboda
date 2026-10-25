@@ -774,3 +774,90 @@ button.cal-day:hover {
 .zone-legend .workout-badge {
   margin-right: 0.1rem;
 }
+
+@media (prefers-color-scheme: dark) {
+  .segmented {
+    border-color: #323846;
+  }
+
+  .segmented button {
+    background: #1c1f26;
+    color: #e5e7eb;
+    border-right-color: #323846;
+  }
+
+  .segmented button.active {
+    background: #e5e7eb;
+    color: #111827;
+  }
+
+  .type-filter,
+  .btn-small {
+    background: #1c1f26;
+    border-color: #323846;
+    color: #e5e7eb;
+  }
+
+  .btn-small.danger {
+    color: #f47067;
+    border-color: #7f1d1d;
+  }
+
+  .btn-small.primary {
+    background: #e5e7eb;
+    border-color: #e5e7eb;
+    color: #111827;
+  }
+
+  .workout-badge.outline {
+    background: #1c1f26;
+  }
+
+  .workout-stats > div,
+  .workout-day-panel,
+  .workout-chip,
+  .recovery-card,
+  .metric-grid > div,
+  .pr-grid > div,
+  .suggestion {
+    border-color: #323846;
+  }
+
+  .workout-chip:hover {
+    background: #222631;
+  }
+
+  .workout-stats span,
+  .workout-chip-meta,
+  .workout-chip-sources,
+  .workout-hint,
+  .workout-empty,
+  .recovery-head span,
+  .metric-grid .label,
+  .mark-legend {
+    color: #9ca3af;
+  }
+
+  .workout-table th,
+  .workout-table td {
+    border-bottom-color: #262a33;
+  }
+
+  .workout-error {
+    color: #f47067;
+  }
+
+  .lift-card {
+    background: #1c1f26;
+    border-color: #323846;
+    color: #e5e7eb;
+  }
+
+  .lift-card.active {
+    outline-color: #5598e7;
+  }
+
+  .lift-card .small {
+    color: #9ca3af;
+  }
+}
