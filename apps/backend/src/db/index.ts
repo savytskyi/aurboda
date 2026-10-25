@@ -16,7 +16,9 @@ export type {
   McpSessionRecord,
   FoodItemEntity,
   Meal,
+  MealEstimate,
   MealFoodItem,
+  MealPhotoMeta,
   MealFoodItemLink,
   MergedActivity,
   Micros,
@@ -514,6 +516,8 @@ export {
   unsetMealLogCompleted,
   updateMeal,
 } from './meals.ts'
+
+export { deleteMealPhoto, getMealPhotoData, getMealPhotosBatch, upsertMealPhoto } from './meal-photos.ts'
 
 export { getLabResults, insertLabResult } from './lab-results.ts'
 

@@ -134,6 +134,31 @@ Logging on the base unit uses the legacy free-form `quantity` + `unit` path, unc
 - `PUT /food-items/:id/override` -- per-user override on a central item; accepts `icon`, `default_portion_id`, and/or `default_log_quantity`
 - Composite/reference helpers: `PUT|DELETE /food-items/:id/ingredients`, `PUT|DELETE /food-items/:id/reference`, `POST /food-items/:id/resnapshot-meals`, merge endpoints
 
+## Estimates and photos
+
+Meals logged from photos or speech (e.g. by the Hermes food assistant, `source: "hermes"`) carry two extras:
+
+- `estimate` (JSONB, stored as given): how the nutrition was estimated — components with a central gram estimate,
+  `grams_low`/`grams_high`, `basis` (`visible`, `likely`, `assumed`, `user`, `recipe`, `product`) and confidence;
+  meal `totals` with `low`/`high`; per-nutrient `coverage` (share of the meal's mass whose composition provides the
+  nutrient); `unknown_nutrients`; the `original` estimate and every later `corrections` entry; the matched `recipe`.
+  The food items and macros are still the authoritative snapshot — the estimate explains them.
+- `photos[]`: images of the serving (`kind: "meal"`) or of what was left (`kind: "leftover"`), stored in the user's
+  own database (`meal_photos`, cascade-deleted with the meal). Clients downscale before upload (max 3 MB).
+
+The meal detail page shows the photos, the plausible kcal range, each component with its basis, what was seen /
+inferred / unknown, nutrients that are not known for the meal, and the corrections; the day view shows a thumbnail
+and an "est." confidence badge.
+
+API:
+
+- `PUT /meals/:id/photos/:photoId` -- body `{ content_type, data_base64, kind?, width?, height?, sha256? }`; idempotent on photo id
+- `GET /meals/:id/photos/:photoId` -- image bytes (bearer auth)
+- `DELETE /meals/:id/photos/:photoId`
+- `estimate` is accepted by `PUT /meals` and `PATCH /meals/:id` and returned on every meal
+
+MCP: `add_meal` / `update_meal` accept `estimate`; `add_meal_photo`, `delete_meal_photo`.
+
 ## Data Sources
 
 ### Manual (Web UI)

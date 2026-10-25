@@ -20,8 +20,29 @@ export const mealsTables: Record<string, string> = {
       micros          JSONB,
       notes           TEXT,
       sensitivities   TEXT[],
+      estimate        JSONB,
       created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
+  `,
+
+  // Photos of a logged meal (the serving that was eaten, or what was left).
+  // Stored in the user's own database so they share its isolation, access
+  // control and backups; clients downscale before upload (~100–300 kB).
+  meal_photos: `
+    CREATE TABLE IF NOT EXISTS meal_photos (
+      id              UUID PRIMARY KEY,
+      meal_id         UUID NOT NULL REFERENCES meals(id) ON DELETE CASCADE,
+      kind            VARCHAR(20) NOT NULL DEFAULT 'meal',
+      content_type    VARCHAR(50) NOT NULL,
+      sha256          VARCHAR(64),
+      width           INTEGER,
+      height          INTEGER,
+      data            BYTEA NOT NULL,
+      created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `,
+  meal_photos_indexes: `
+    CREATE INDEX IF NOT EXISTS idx_meal_photos_meal ON meal_photos (meal_id, created_at)
   `,
 
   meal_log_completed: `

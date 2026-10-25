@@ -10,6 +10,7 @@ import {
   type FrequentMealsResponse,
   frequentFoodItemsQuerySchema,
   frequentMealsQuerySchema,
+  type MealPhotoResponse,
   type MealResponse,
   type MealsQuery,
   type MealsResponse,
@@ -17,6 +18,8 @@ import {
   type NutrientPeriodSummaryQuery,
   type NutrientPeriodSummaryResponse,
   nutrientPeriodSummaryQuerySchema,
+  type PutMealPhotoBody,
+  putMealPhotoBodySchema,
   type UpdateMealBody,
   updateMealBodySchema,
 } from '@aurboda/api-spec'
@@ -25,7 +28,10 @@ import { getMealLogCompleted, setMealLogCompleted, unsetMealLogCompleted } from 
 import {
   addMeal,
   deleteMealById,
+  deleteMealPhoto,
   getMeal,
+  getMealPhoto,
+  putMealPhoto,
   queryFrequentFoodItems,
   queryFrequentMeals,
   queryMeals,
@@ -34,6 +40,8 @@ import {
 import { getMealPeriodSummary } from '../services/queries/meal-period-summary.ts'
 import { type AnyMiddleware, type TypedRouter, typedRouter } from '../typed-router.ts'
 import { validateBody, validateQuery } from '../validation.ts'
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 /** Check if a date is marked as logging-complete. Returns undefined if no date provided. */
 const checkLogCompleted = async (user: string, start?: string): Promise<boolean | undefined> => {
@@ -154,6 +162,52 @@ export const createMealsRouter = (authMiddleware: AnyMiddleware): TypedRouter =>
         return res.status(status).json({ error: result.error, success: false })
       }
       res.json({ data: result.data, success: true })
+    },
+  )
+
+  router.put<{ id: string; photoId: string }, MealPhotoResponse, PutMealPhotoBody>(
+    '/:id/photos/:photoId',
+    authMiddleware,
+    validateBody(putMealPhotoBodySchema),
+    async (req, res) => {
+      if (!UUID_RE.test(req.params.id) || !UUID_RE.test(req.params.photoId)) {
+        return res.status(400).json({ error: 'Meal and photo ids must be UUIDs', success: false })
+      }
+      const result = await putMealPhoto(req.user!, req.params.id, req.params.photoId, req.body)
+      if (!result.success) {
+        return res
+          .status(result.errorCode === 'not_found' ? 404 : 400)
+          .json({ error: result.error, success: false })
+      }
+      res.json({ data: result.data, success: true })
+    },
+  )
+
+  router.get<{ id: string; photoId: string }, Buffer>(
+    '/:id/photos/:photoId',
+    authMiddleware,
+    async (req, res) => {
+      if (!UUID_RE.test(req.params.id) || !UUID_RE.test(req.params.photoId)) {
+        return res.status(404).end()
+      }
+      const photo = await getMealPhoto(req.user!, req.params.id, req.params.photoId)
+      if (!photo) return res.status(404).end()
+      res.setHeader('Content-Type', photo.content_type)
+      res.setHeader('Cache-Control', 'private, max-age=86400')
+      res.send(photo.data)
+    },
+  )
+
+  router.delete<{ id: string; photoId: string }, DeleteMealResponse>(
+    '/:id/photos/:photoId',
+    authMiddleware,
+    async (req, res) => {
+      if (!UUID_RE.test(req.params.id) || !UUID_RE.test(req.params.photoId)) {
+        return res.status(404).json({ error: 'Photo not found', success: false })
+      }
+      const deleted = await deleteMealPhoto(req.user!, req.params.id, req.params.photoId)
+      if (!deleted) return res.status(404).json({ error: 'Photo not found', success: false })
+      res.json({ success: true })
     },
   )
 

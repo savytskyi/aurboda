@@ -192,6 +192,7 @@ export const mapMealRow = (row: QueryResultRow): Meal => ({
   calories: row.calories ?? undefined,
   carbs: row.carbs ?? undefined,
   created_at: new Date(row.created_at),
+  estimate: row.estimate ? (row.estimate as Record<string, unknown>) : undefined,
   fat: row.fat ?? undefined,
   fiber: row.fiber ?? undefined,
   food_items: row.food_items ? (row.food_items as MealFoodItem[]) : undefined,

@@ -839,6 +839,9 @@ export const migrateSchema = async (user: string, opts?: { force?: boolean }) =>
       `ALTER TABLE feed_posts ADD COLUMN IF NOT EXISTS image_token TEXT NOT NULL DEFAULT gen_random_uuid()::text`,
     )
   }
+  if (existingTableNames.has('meals')) {
+    await query(db, `ALTER TABLE meals ADD COLUMN IF NOT EXISTS estimate JSONB`)
+  }
   if (existingTableNames.has('activities')) {
     await query(db, `ALTER TABLE activities ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ`)
     await query(db, `ALTER TABLE activities ADD COLUMN IF NOT EXISTS external_id VARCHAR(255)`)

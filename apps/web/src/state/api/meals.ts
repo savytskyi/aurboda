@@ -53,6 +53,16 @@ export const fetchMeals = async (params?: MealsQuery): Promise<MealsResult> => {
   }
 }
 
+/** Photo bytes need the bearer token, so they are fetched as a blob and shown via an object URL. */
+export const fetchMealPhotoBlob = async (mealId: string, photoId: string): Promise<Blob> => {
+  const { token } = auth.value
+  const response = await axios.get<Blob>(`${API_URL}/meals/${mealId}/photos/${photoId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+    responseType: 'blob',
+  })
+  return response.data
+}
+
 export const fetchMeal = async (id: string): Promise<Meal> => {
   const { token } = auth.value
   const response = await axios.get<MealResponse>(`${API_URL}/meals/${id}`, {

@@ -21,6 +21,7 @@ import { createDebouncedFlusher } from '../../utils/debouncedFlusher'
 import { LocationInfo, MEAL_LOCATION_WINDOW_MS } from '../EntityDetail/LocationInfo'
 import { NotesSection } from '../EntityDetail/NotesSection'
 import './MealDetail.css'
+import { MealEstimatePanel, MealPhotoStrip } from './MealEstimatePanel'
 import { editItemsToBody, type FoodItemEdit, mealItemsToEdit, scaleNutrient } from './mealItems'
 import { DEFAULT_CUSTOM_TYPE, MEAL_TYPES, resolveMealTypeChange } from './mealTypes'
 
@@ -710,6 +711,8 @@ export function MealDetail() {
 
       {meal.source && meal.source !== 'manual' && <p class="detail-source-caption">Source: {meal.source}</p>}
 
+      <MealPhotoStrip mealId={id} photos={meal.photos} />
+
       <div class="detail-layout">
         <div class="detail-card">
           <div class="detail-row">
@@ -807,9 +810,13 @@ export function MealDetail() {
             {meal.nutrient_data_incomplete && (
               <p class="incomplete-notice">Some food items lack nutrient data — totals may be understated.</p>
             )}
+            <MealEstimatePanel estimate={meal.estimate} />
           </div>
         ) : (
-          <div class="nutrient-breakdown nutrient-placeholder" />
+          <div>
+            <div class="nutrient-breakdown nutrient-placeholder" />
+            <MealEstimatePanel estimate={meal.estimate} />
+          </div>
         )}
       </div>
 

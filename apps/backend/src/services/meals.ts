@@ -10,7 +10,13 @@ import {
   listPortionsForFoodItem,
   getFrequentFoodItems as dbGetFrequentFoodItems,
   getFrequentMeals as dbGetFrequentMeals,
+  deleteMealPhoto as dbDeleteMealPhoto,
   getMealById as dbGetMealById,
+  getMealPhotoData as dbGetMealPhotoData,
+  getMealPhotosBatch,
+  type MealEstimate,
+  type MealPhotoMeta,
+  upsertMealPhoto as dbUpsertMealPhoto,
   getMealFoodItems,
   getMealFoodItemsBatch,
   getMeals as dbGetMeals,
@@ -63,6 +69,7 @@ export interface AddMealInput {
   micros?: Micros
   notes?: string
   sensitivities?: string[]
+  estimate?: MealEstimate
 }
 
 export interface UpdateMealInput {
@@ -78,6 +85,17 @@ export interface UpdateMealInput {
   micros?: Micros | null
   notes?: string | null
   sensitivities?: string[] | null
+  estimate?: MealEstimate | null
+}
+
+interface MealPhotoResponse {
+  id: string
+  kind: string
+  content_type: string
+  sha256?: string
+  width?: number
+  height?: number
+  created_at: string
 }
 
 interface MealResponse {
@@ -97,6 +115,8 @@ interface MealResponse {
   nutrients?: Record<string, number>
   nutrient_data_incomplete?: boolean
   sensitivities?: string[]
+  estimate?: MealEstimate
+  photos?: MealPhotoResponse[]
   created_at: string
 }
 
@@ -123,7 +143,21 @@ interface MealsResult {
   error?: string
 }
 
-type EnrichedMeal = Meal & { nutrients?: Record<string, number>; nutrient_data_incomplete?: boolean }
+type EnrichedMeal = Meal & {
+  nutrients?: Record<string, number>
+  nutrient_data_incomplete?: boolean
+  photos?: MealPhotoMeta[]
+}
+
+const formatPhoto = (photo: MealPhotoMeta): MealPhotoResponse => ({
+  content_type: photo.content_type,
+  created_at: photo.created_at.toISOString(),
+  height: photo.height,
+  id: photo.id,
+  kind: photo.kind,
+  sha256: photo.sha256,
+  width: photo.width,
+})
 
 /**
  * Combine the meal's directly-set flags (stored on the meal row) with the
@@ -145,6 +179,7 @@ const formatMeal = (meal: EnrichedMeal): MealResponse => ({
   calories: meal.calories,
   carbs: meal.carbs,
   created_at: meal.created_at.toISOString(),
+  estimate: meal.estimate,
   fat: meal.fat,
   fiber: meal.fiber,
   food_items: meal.food_items,
@@ -155,6 +190,7 @@ const formatMeal = (meal: EnrichedMeal): MealResponse => ({
   notes: meal.notes,
   nutrient_data_incomplete: meal.nutrient_data_incomplete,
   nutrients: meal.nutrients,
+  photos: meal.photos && meal.photos.length > 0 ? meal.photos.map(formatPhoto) : undefined,
   protein: meal.protein,
   sensitivities: computeMealSensitivities(meal),
   source: meal.source,
@@ -242,7 +278,10 @@ export const hasIncompleteNutrients = (links: MealFoodItemLink[]): boolean =>
 
 const attachFoodItems = async (user: string, meals: Meal[]): Promise<EnrichedMeal[]> => {
   const mealIds = meals.map((m) => m.id)
-  const junctionMap = await getMealFoodItemsBatch(user, mealIds)
+  const [junctionMap, photoMap] = await Promise.all([
+    getMealFoodItemsBatch(user, mealIds),
+    getMealPhotosBatch(user, mealIds),
+  ])
 
   // Collect every food_item_id referenced across all meals so name/icon and
   // sensitivity flag names are resolved against the live canonical rows in a
@@ -265,11 +304,12 @@ const attachFoodItems = async (user: string, meals: Meal[]): Promise<EnrichedMea
         ...meal,
         food_items: linksToFoodItems(links, displayMap, sensitivityMap),
         nutrients,
+        photos: photoMap.get(meal.id),
         ...(incomplete ? { nutrient_data_incomplete: true } : {}),
       }
     }
     // Fall back to JSONB food_items if no junction rows exist (legacy data)
-    return meal
+    return { ...meal, photos: photoMap.get(meal.id) }
   })
 }
 
@@ -513,6 +553,7 @@ export async function addMeal(user: string, input: AddMealInput): Promise<MealRe
     id: input.id,
     calories: input.calories,
     carbs: input.carbs,
+    estimate: input.estimate,
     fat: input.fat,
     fiber: input.fiber,
     food_items: input.food_items,
@@ -830,3 +871,58 @@ export async function deleteMealById(
   await dbDeleteNotesForEntity(user, 'meal', id)
   return { success: true }
 }
+
+const MAX_PHOTO_BYTES = 3_000_000
+
+export interface PutMealPhotoInput {
+  content_type: string
+  data_base64: string
+  kind: string
+  sha256?: string
+  width?: number
+  height?: number
+}
+
+type PhotoResult =
+  | { success: true; data: MealPhotoResponse }
+  | { success: false; error: string; errorCode: MealResultErrorCode }
+
+const looksLikeImage = (data: Buffer, contentType: string): boolean => {
+  if (contentType === 'image/jpeg') return data[0] === 0xff && data[1] === 0xd8
+  if (contentType === 'image/png') return data.subarray(0, 4).toString('hex') === '89504e47'
+  if (contentType === 'image/webp') return data.subarray(8, 12).toString('ascii') === 'WEBP'
+  return false
+}
+
+export async function putMealPhoto(
+  user: string,
+  mealId: string,
+  photoId: string,
+  input: PutMealPhotoInput,
+): Promise<PhotoResult> {
+  const data = Buffer.from(input.data_base64, 'base64')
+  if (data.length === 0 || data.length > MAX_PHOTO_BYTES) {
+    return { error: 'Photo must be between 1 byte and 3 MB', errorCode: 'invalid', success: false }
+  }
+  if (!looksLikeImage(data, input.content_type)) {
+    return { error: `Data is not a ${input.content_type} image`, errorCode: 'invalid', success: false }
+  }
+  const saved = await dbUpsertMealPhoto(user, {
+    content_type: input.content_type,
+    data,
+    height: input.height,
+    id: photoId,
+    kind: input.kind,
+    meal_id: mealId,
+    sha256: input.sha256,
+    width: input.width,
+  })
+  if (!saved) return { error: 'Meal not found', errorCode: 'not_found', success: false }
+  return { data: formatPhoto(saved), success: true }
+}
+
+export const getMealPhoto = (user: string, mealId: string, photoId: string) =>
+  dbGetMealPhotoData(user, mealId, photoId)
+
+export const deleteMealPhoto = (user: string, mealId: string, photoId: string) =>
+  dbDeleteMealPhoto(user, mealId, photoId)

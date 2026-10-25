@@ -3,6 +3,7 @@ import {
   frequentFoodItemsQuerySchema,
   frequentMealsQuerySchema,
   mealsQuerySchema,
+  putMealPhotoBodySchema,
   tzSchema,
   updateMealBodySchema,
 } from '@aurboda/api-spec'
@@ -11,7 +12,9 @@ import { z } from 'zod'
 import {
   addMeal,
   deleteMealById,
+  deleteMealPhoto,
   getMeal,
+  putMealPhoto,
   queryFrequentFoodItems,
   queryFrequentMeals,
   queryMeals,
@@ -107,6 +110,34 @@ export const registerMealTools = (server: McpServer, user: string) => {
         return errorResponse(result.error ?? 'Meal not found')
       }
       return tzJsonResponse(result, tz)
+    },
+  )
+
+  server.tool(
+    'add_meal_photo',
+    'Attach (or replace) a photo of a meal. Idempotent on photo_id. Downscale before uploading (max 3 MB).',
+    {
+      meal_id: z.string().uuid().describe('The meal ID'),
+      photo_id: z.string().uuid().describe('Client-generated photo ID'),
+      ...putMealPhotoBodySchema.shape,
+    },
+    async ({ meal_id, photo_id, ...body }) => {
+      const result = await putMealPhoto(user, meal_id, photo_id, body)
+      if (!result.success) return errorResponse(result.error)
+      return jsonResponse(result)
+    },
+  )
+
+  server.tool(
+    'delete_meal_photo',
+    'Remove a photo from a meal.',
+    {
+      meal_id: z.string().uuid().describe('The meal ID'),
+      photo_id: z.string().uuid().describe('The photo ID'),
+    },
+    async ({ meal_id, photo_id }) => {
+      const deleted = await deleteMealPhoto(user, meal_id, photo_id)
+      return deleted ? jsonResponse({ success: true }) : errorResponse('Photo not found')
     },
   )
 }

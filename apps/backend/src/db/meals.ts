@@ -1,10 +1,10 @@
-import type { Meal, MealFoodItem, Micros } from './types.ts'
+import type { Meal, MealEstimate, MealFoodItem, Micros } from './types.ts'
 
 import { query } from './connection.ts'
 import { mapMealRow } from './row-mappers.ts'
 
 const MEAL_COLUMNS =
-  'id, source, meal_type, name, time, calories, protein, carbs, fat, fiber, food_items, micros, notes, sensitivities, created_at'
+  'id, source, meal_type, name, time, calories, protein, carbs, fat, fiber, food_items, micros, notes, sensitivities, estimate, created_at'
 
 export interface InsertMealInput {
   id?: string
@@ -21,6 +21,7 @@ export interface InsertMealInput {
   micros?: Micros
   notes?: string
   sensitivities?: string[]
+  estimate?: MealEstimate
 }
 
 /** Passing `id` makes the operation idempotent — retries with the same ID are safe. */
@@ -39,26 +40,28 @@ export const upsertMeal = async (user: string, input: InsertMealInput): Promise<
     input.micros ? JSON.stringify(input.micros) : null,
     input.notes ?? null,
     input.sensitivities ?? null,
+    input.estimate ? JSON.stringify(input.estimate) : null,
   ]
 
   const result = input.id
     ? await query(
         user,
-        `INSERT INTO meals (id, source, meal_type, name, time, calories, protein, carbs, fat, fiber, food_items, micros, notes, sensitivities)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        `INSERT INTO meals (id, source, meal_type, name, time, calories, protein, carbs, fat, fiber, food_items, micros, notes, sensitivities, estimate)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
          ON CONFLICT (id) DO UPDATE SET
            source = EXCLUDED.source, meal_type = EXCLUDED.meal_type, name = EXCLUDED.name,
            time = EXCLUDED.time, calories = EXCLUDED.calories, protein = EXCLUDED.protein,
            carbs = EXCLUDED.carbs, fat = EXCLUDED.fat, fiber = EXCLUDED.fiber,
            food_items = EXCLUDED.food_items, micros = EXCLUDED.micros,
-           notes = EXCLUDED.notes, sensitivities = EXCLUDED.sensitivities
+           notes = EXCLUDED.notes, sensitivities = EXCLUDED.sensitivities,
+           estimate = EXCLUDED.estimate
          RETURNING ${MEAL_COLUMNS}`,
         [input.id, ...commonParams],
       )
     : await query(
         user,
-        `INSERT INTO meals (source, meal_type, name, time, calories, protein, carbs, fat, fiber, food_items, micros, notes, sensitivities)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        `INSERT INTO meals (source, meal_type, name, time, calories, protein, carbs, fat, fiber, food_items, micros, notes, sensitivities, estimate)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
          RETURNING ${MEAL_COLUMNS}`,
         commonParams,
       )
@@ -209,6 +212,7 @@ export interface UpdateMealInput {
   micros?: Micros | null
   notes?: string | null
   sensitivities?: string[] | null
+  estimate?: MealEstimate | null
 }
 
 const SIMPLE_UPDATE_FIELDS = [
@@ -224,7 +228,7 @@ const SIMPLE_UPDATE_FIELDS = [
   'sensitivities',
 ] as const
 
-const JSONB_UPDATE_FIELDS = ['food_items', 'micros'] as const
+const JSONB_UPDATE_FIELDS = ['food_items', 'micros', 'estimate'] as const
 
 export const updateMeal = async (user: string, id: string, input: UpdateMealInput): Promise<Meal | null> => {
   const setClauses: string[] = []

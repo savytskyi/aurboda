@@ -357,6 +357,21 @@ export interface Meal {
   micros?: Micros
   notes?: string
   sensitivities?: string[]
+  estimate?: MealEstimate
+  created_at: Date
+}
+
+/** Client-supplied estimation record (components, ranges, provenance); opaque to the backend. */
+export type MealEstimate = Record<string, unknown>
+
+export interface MealPhotoMeta {
+  id: string
+  meal_id: string
+  kind: string
+  content_type: string
+  sha256?: string
+  width?: number
+  height?: number
   created_at: Date
 }
 

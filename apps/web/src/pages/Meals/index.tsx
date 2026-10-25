@@ -25,8 +25,9 @@ import {
 import { auth } from '../../state/auth'
 import { isEmoji, isIconPath, isUrl } from '../../utils/emojiLookup'
 import { aggregateDayNutrients } from './dayNutrients'
-import { MealsOverview } from './MealsOverview'
+import { EstimateBadge, MealThumb } from './MealEstimatePanel'
 import './style.css'
+import { MealsOverview } from './MealsOverview'
 
 interface MealSlot {
   name: string
@@ -223,11 +224,13 @@ function MealDetails({
 
   return (
     <div class="meal-details">
+      <MealThumb meal={meal} />
       {meal.name && (
         <a href={`/meals/${meal.id}`} class="meal-name">
           {meal.name}
         </a>
       )}
+      <EstimateBadge estimate={meal.estimate} />
       {showFoodItems && hasFoodItems && (
         <div class="food-items">
           {meal.food_items!.map((item, i) => (

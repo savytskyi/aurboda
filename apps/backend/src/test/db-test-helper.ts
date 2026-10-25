@@ -88,6 +88,7 @@ export const cleanTestDb = async (): Promise<void> => {
     'shared_food_item_overrides',
     'user_nutrient_recommendations',
     'meal_food_items',
+    'meal_photos',
     'food_item_portions',
     'food_items',
     'report_entries',

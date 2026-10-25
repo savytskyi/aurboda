@@ -134,14 +134,50 @@ export const foodItemInputSchema = z
 
 export type FoodItemInput = z.infer<typeof foodItemInputSchema>
 
+/**
+ * How a meal's nutrition was estimated (e.g. from photos): components with gram estimates and
+ * low/high ranges, their basis (visible / assumed / user / recipe), per-nutrient coverage, nutrients
+ * that are unknown, the original estimate and the corrections applied since. Written by the client
+ * that estimated the meal; Aurboda stores and returns it unchanged.
+ */
+export const mealEstimateSchema = z.record(z.string(), z.unknown()).meta({
+  description:
+    'Estimation record for a meal logged from photos or speech: components (grams, low/high, basis, confidence), totals with low/high ranges, nutrient coverage, unknown nutrients, original estimate and corrections. Stored as given.',
+  id: 'MealEstimate',
+})
+
+export type MealEstimate = z.infer<typeof mealEstimateSchema>
+
+export const mealPhotoSchema = z
+  .object({
+    content_type: z.string().meta({ description: 'Image MIME type' }),
+    created_at: iso8601DateTimeSchema,
+    height: z.number().int().optional(),
+    id: z.string().uuid(),
+    kind: z.string().meta({ description: '"meal" (what was eaten) or "leftover" (what was left)' }),
+    sha256: z
+      .string()
+      .optional()
+      .meta({ description: 'SHA-256 of the original upload, for duplicate detection' }),
+    width: z.number().int().optional(),
+  })
+  .meta({
+    description: 'A photo attached to a meal (fetch bytes from /meals/{id}/photos/{photo_id})',
+    id: 'MealPhoto',
+  })
+
+export type MealPhoto = z.infer<typeof mealPhotoSchema>
+
 export const mealSchema = z
   .object({
     calories: z.number().optional().meta({ description: 'Total energy in kcal' }),
     carbs: z.number().optional().meta({ description: 'Total carbohydrates in grams' }),
     created_at: iso8601DateTimeSchema.optional(),
+    estimate: mealEstimateSchema.optional(),
     fat: z.number().optional().meta({ description: 'Total fat in grams' }),
     fiber: z.number().optional().meta({ description: 'Total dietary fiber in grams' }),
     food_items: z.array(foodItemSchema).optional().meta({ description: 'Individual food items' }),
+    photos: z.array(mealPhotoSchema).optional().meta({ description: 'Photos attached to the meal' }),
     id: z.string().uuid().optional().meta({ description: 'Meal ID' }),
     meal_type: mealTypeSchema.optional().meta({ description: 'Type of meal' }),
     micros: microsSchema.meta({
@@ -182,6 +218,7 @@ export const addMealBodySchema = z
       .meta({ description: 'Client-generated meal ID (enables idempotent PUT)' }),
     calories: z.number().optional().meta({ description: 'Total energy in kcal' }),
     carbs: z.number().optional().meta({ description: 'Total carbohydrates in grams' }),
+    estimate: mealEstimateSchema.optional(),
     fat: z.number().optional().meta({ description: 'Total fat in grams' }),
     fiber: z.number().optional().meta({ description: 'Total dietary fiber in grams' }),
     food_items: z
@@ -211,6 +248,7 @@ export const updateMealBodySchema = z
   .object({
     calories: z.number().nullable().optional().meta({ description: 'Total energy in kcal' }),
     carbs: z.number().nullable().optional().meta({ description: 'Total carbohydrates in grams' }),
+    estimate: mealEstimateSchema.nullable().optional(),
     fat: z.number().nullable().optional().meta({ description: 'Total fat in grams' }),
     fiber: z.number().nullable().optional().meta({ description: 'Total dietary fiber in grams' }),
     food_items: z
@@ -268,6 +306,35 @@ export type MealsResponse = z.infer<typeof mealsResponseSchema>
 export const deleteMealResponseSchema = baseResponseSchema.meta({ id: 'DeleteMealResponse' })
 
 export type DeleteMealResponse = z.infer<typeof deleteMealResponseSchema>
+
+export const putMealPhotoBodySchema = z
+  .object({
+    content_type: z.enum(['image/jpeg', 'image/png', 'image/webp']).meta({ description: 'Image MIME type' }),
+    data_base64: z
+      .string()
+      .min(1)
+      .max(4_000_000)
+      .meta({ description: 'Image bytes, base64 (downscale first; at most ~3 MB of image)' }),
+    height: z.number().int().positive().optional(),
+    kind: z.enum(['meal', 'leftover']).default('meal'),
+    sha256: z
+      .string()
+      .regex(/^[0-9a-f]{64}$/)
+      .optional(),
+    width: z.number().int().positive().optional(),
+  })
+  .meta({
+    description: 'Upload (or replace) one photo of a meal; idempotent on photo id',
+    id: 'PutMealPhotoBody',
+  })
+
+export type PutMealPhotoBody = z.infer<typeof putMealPhotoBodySchema>
+
+export const mealPhotoResponseSchema = createDataResponseSchema(mealPhotoSchema).meta({
+  id: 'MealPhotoResponse',
+})
+
+export type MealPhotoResponse = z.infer<typeof mealPhotoResponseSchema>
 
 /**
  * Query parameters for the frequent-meals endpoint.

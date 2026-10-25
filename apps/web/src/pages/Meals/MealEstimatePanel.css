@@ -1,0 +1,80 @@
+.meal-photos {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 0.5rem 0;
+}
+
+.meal-photo {
+  display: block;
+  border-radius: 6px;
+  object-fit: cover;
+  background: var(--color-surface-muted, rgba(127, 127, 127, 0.15));
+}
+
+.meal-photo-thumb {
+  width: 64px;
+  height: 64px;
+}
+
+.meal-photo-full {
+  width: min(320px, 100%);
+  height: auto;
+  max-height: 320px;
+}
+
+.meal-photo-loading.meal-photo-full {
+  height: 200px;
+}
+
+.estimate-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  opacity: 0.75;
+  margin-left: 0.4rem;
+}
+
+.estimate-low {
+  color: var(--color-warning, #b26b00);
+}
+
+.meal-estimate {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+}
+
+.meal-estimate h3 {
+  font-size: 1rem;
+  margin: 0 0 0.4rem;
+}
+
+.estimate-components {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.estimate-components th,
+.estimate-components td {
+  text-align: left;
+  padding: 0.2rem 0.4rem;
+  border-bottom: 1px solid rgba(127, 127, 127, 0.2);
+}
+
+.estimate-assumed td {
+  font-style: italic;
+  opacity: 0.8;
+}
+
+.estimate-grams-range,
+.estimate-by,
+.estimate-unknown {
+  opacity: 0.7;
+}
+
+.estimate-observations {
+  margin: 0.5rem 0;
+  padding-left: 1.2rem;
+}
