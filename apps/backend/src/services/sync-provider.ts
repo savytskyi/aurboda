@@ -277,16 +277,15 @@ export function createSyncProvider(config: SyncProviderConfig): SyncProvider {
 
     syncOuraIfNeeded: debounced(
       'syncOuraIfNeeded',
-      async (user: string, dataType: 'tags' | 'sessions'): Promise<void> => {
+      async (user: string, ouraDataType: OuraDataType): Promise<void> => {
         if (!config.oura) return
         if (!(await getOAuthToken(user, 'oura'))) return
 
         try {
-          const ouraDataType: OuraDataType = dataType
           const syncState = await getSyncState(user, 'oura', ouraDataType)
 
           if (isOuraRateLimited(syncState)) {
-            auditWarn(user, 'sync', `Oura ${dataType} sync skipped - rate limited`, {
+            auditWarn(user, 'sync', `Oura ${ouraDataType} sync skipped - rate limited`, {
               retry_after: syncState?.retry_after?.toISOString(),
             })
             return
@@ -298,12 +297,12 @@ export function createSyncProvider(config: SyncProviderConfig): SyncProvider {
             return
           }
 
-          auditInfo(user, 'sync', `Auto-syncing Oura ${dataType}`)
+          auditInfo(user, 'sync', `Auto-syncing Oura ${ouraDataType}`)
           const accessToken = await config.oura.getAccessToken(user)
           const result = await syncOuraDataType(user, config.oura, ouraDataType, accessToken)
           triggerDeductionAfterSync(user, syncState, result)
         } catch (error) {
-          auditError(user, 'sync', `Failed to auto-sync Oura ${dataType}`, { error: String(error) })
+          auditError(user, 'sync', `Failed to auto-sync Oura ${ouraDataType}`, { error: String(error) })
         }
       },
     ),

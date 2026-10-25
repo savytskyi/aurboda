@@ -11,7 +11,7 @@ const makeHangingSync = (): { sync: SyncProvider; calls: string[] } => {
   const calls: string[] = []
   const never = () => new Promise<void>(() => {})
   const sync: SyncProvider = {
-    syncOuraIfNeeded: vi.fn((_user: string, dataType: 'tags' | 'sessions') => {
+    syncOuraIfNeeded: vi.fn((_user: string, dataType: string) => {
       calls.push(`oura:${dataType}`)
       return never()
     }),

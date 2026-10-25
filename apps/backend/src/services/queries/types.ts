@@ -1,6 +1,7 @@
 import type { ActivityComputedMetrics, DataSource, EntityType } from '@aurboda/api-spec'
 
 import type { Note } from '../../db/index.ts'
+import type { OuraDataType } from '../../integrations/oura/process.ts'
 import type { MetricType } from '../../schema.ts'
 import type { HrZoneSecs } from '../settings.ts'
 
@@ -85,7 +86,7 @@ export const dedupeCommentsForIds = (
  * Provider for auto-syncing data from external sources before queries.
  */
 export interface SyncProvider {
-  syncOuraIfNeeded: (user: string, dataType: 'tags' | 'sessions') => Promise<void>
+  syncOuraIfNeeded: (user: string, dataType: OuraDataType) => Promise<void>
   syncGarminIfNeeded: (user: string, dataType: string) => Promise<void>
   syncRescueTimeIfNeeded: (user: string) => Promise<void>
   syncCalendarsIfNeeded: (user: string) => Promise<void>

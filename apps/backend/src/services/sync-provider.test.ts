@@ -241,6 +241,16 @@ describe('createSyncProvider › syncOuraIfNeeded', () => {
     expect(onActivitySynced).toHaveBeenCalledWith('alice', '*', lastSync, expect.any(Date))
   })
 
+  test('syncs a daily collection with its own sync state once the interval has passed', async () => {
+    vi.mocked(syncOuraDataType).mockResolvedValue({ records_processed: 1, status: 'success' } as never)
+    const provider = createSyncProvider({ oura })
+
+    await provider.syncOuraIfNeeded('alice', 'dailyReadiness')
+
+    expect(dbIndex.getSyncState).toHaveBeenCalledWith('alice', 'oura', 'dailyReadiness')
+    expect(syncOuraDataType).toHaveBeenCalledWith('alice', oura, 'dailyReadiness', 'token')
+  })
+
   test('does not trigger deduction when no new records were processed', async () => {
     vi.mocked(syncOuraDataType).mockResolvedValue({ records_processed: 0, status: 'success' } as never)
     const onActivitySynced = vi.fn()

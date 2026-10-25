@@ -13,12 +13,36 @@
  * (pg-boss cron), and a tick runs users sequentially to keep upstream API use
  * flat.
  */
+import type { OuraDataType } from '../integrations/oura/process.ts'
 import type { PgBoss } from './pg-boss.ts'
 import type { SyncProvider } from './queries/types.ts'
 
 import { auditError } from './audit-log.ts'
 
 const QUEUE_NAME = 'sync-scheduler'
+
+/**
+ * Oura collections the tick keeps fresh. Upstream relies on Oura's webhook
+ * push for the daily collections, but webhooks need an HTTPS `WEB_HOST`, so a
+ * plain-HTTP instance would otherwise only get yesterday's scores after a
+ * manual sync. Each type is skipped until the user's Oura interval has passed,
+ * and the sync itself is incremental from the type's own sync state.
+ */
+export const OURA_POLLED_DATA_TYPES = [
+  'tags',
+  'sessions',
+  'dailyReadiness',
+  'dailySleep',
+  'sleep',
+  'dailyActivity',
+  'dailyStress',
+  'dailyResilience',
+  'dailySpo2',
+  'dailyCardiovascularAge',
+  'sleepTime',
+  'heartRate',
+  'workouts',
+] as const satisfies readonly OuraDataType[]
 
 /** Every 5 minutes — the smallest interval a user can configure. */
 export const SYNC_SCHEDULER_CRON = '*/5 * * * *'
@@ -40,8 +64,9 @@ export const runScheduledSyncs = async (deps: SyncSchedulerDeps): Promise<number
   const users = await deps.listUsers()
   for (const user of users) {
     try {
-      await deps.sync.syncOuraIfNeeded(user, 'tags')
-      await deps.sync.syncOuraIfNeeded(user, 'sessions')
+      for (const dataType of OURA_POLLED_DATA_TYPES) {
+        await deps.sync.syncOuraIfNeeded(user, dataType)
+      }
       for (const dataType of deps.garminDataTypes) {
         await deps.sync.syncGarminIfNeeded(user, dataType)
       }

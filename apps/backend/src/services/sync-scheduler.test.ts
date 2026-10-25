@@ -5,7 +5,7 @@ vi.mock('./audit-log.ts', () => ({ auditError: vi.fn() }))
 import type { SyncProvider } from './queries/types.ts'
 
 import { auditError } from './audit-log.ts'
-import { runScheduledSyncs } from './sync-scheduler.ts'
+import { OURA_POLLED_DATA_TYPES, runScheduledSyncs } from './sync-scheduler.ts'
 
 const makeSync = (overrides: Partial<SyncProvider> = {}): SyncProvider => ({
   syncCalendarsIfNeeded: vi.fn().mockResolvedValue(undefined),
@@ -29,6 +29,9 @@ describe('runScheduledSyncs', () => {
     expect(visited).toBe(2)
     expect(sync.syncOuraIfNeeded).toHaveBeenCalledWith('alice', 'tags')
     expect(sync.syncOuraIfNeeded).toHaveBeenCalledWith('alice', 'sessions')
+    expect(sync.syncOuraIfNeeded).toHaveBeenCalledWith('alice', 'dailyReadiness')
+    expect(sync.syncOuraIfNeeded).toHaveBeenCalledWith('bob', 'sleep')
+    expect(sync.syncOuraIfNeeded).toHaveBeenCalledTimes(2 * OURA_POLLED_DATA_TYPES.length)
     expect(sync.syncGarminIfNeeded).toHaveBeenCalledWith('bob', 'sleep')
     expect(sync.syncGarminIfNeeded).toHaveBeenCalledWith('bob', 'activities')
     expect(sync.syncGarminIfNeeded).toHaveBeenCalledTimes(4)
