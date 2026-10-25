@@ -4,34 +4,61 @@ Aurboda provides dedicated sleep tracking and analysis. The Sleep page shows you
 
 ## The Sleep Page
 
-The page at `/sleep` shows your sleep quality over a selectable period (7, 14, 30, 60, or 90 days).
+The page at `/sleep` is one of the health pages (tab row: Overview, Recovery, Sleep, Activity, Stress,
+Heart, Lifestyle — see [Health dashboard](health-dashboard.md)). A range selector under the title
+(7 / 30 / 90 days / 1 year, default 30) scopes everything on the page and is kept in the URL as
+`?range=`, so links are shareable. While a new range loads, the previous one stays on screen, dimmed.
 
-### Overview Stats
+All per-night values come from `GET /health/daily` — one value per wake day (a night belongs to the day
+you woke up on), each with your 30-day personal normal (mean ± 1 SD of the 30 days before it).
 
-Four cards at the top show key metrics with trend arrows comparing to the previous period:
+### Overview cards
 
-- **Sleep Score** -- Overall quality (from Oura), averaged over the period.
-- **Duration** -- Average hours of actual sleep per night (excluding awake time).
-- **Efficiency** -- Time asleep vs. time in bed (percentage).
-- **Latency** -- Time to fall asleep.
+Five cards show the **average per night over the range**, and, underneath, how the **latest night**
+compares with your 30-day normal (green when better, red when worse; neutral metrics stay grey):
 
-### Sleep Score Trend
+- **Sleep score** -- Oura's overall sleep score.
+- **Total sleep** -- `sleep_duration_sec`, Oura's total sleep for the main sleep (naps excluded).
+- **Efficiency** -- `sleep_efficiency_percent`, time asleep vs. time in bed.
+- **Time to fall asleep** -- `sleep_latency_sec`, shown in minutes (lower is better).
+- **Time in bed** -- `time_in_bed_sec`.
 
-A line chart showing your nightly sleep score over time with a dashed average line. The chart uses a blue gradient fill and shows individual data points.
+A line under the cards gives the number of nights with a sleep total in the range.
 
-### Sleep Duration Bars
+### Last night
 
-A bar chart showing hours of sleep per night, color-coded:
+Two stacked bars split sleep into deep, light, REM and awake time: the latest night, and the average
+over the range, each with minutes and percentages.
 
-- **Green** (7-9 hours) -- optimal range, highlighted as a target zone band.
-- **Yellow** (6-7 or 9+ hours) -- caution range.
-- **Red** (under 6 hours) -- insufficient sleep.
+### Sleep score and duration
 
-A dashed average line shows your overall average.
+The sleep score trend line has a shaded band for your 30-day normal. The duration bars are colour-coded
+(green 7-9 h, highlighted as a target zone; yellow 6-7 or 9+ h; red under 6 h) with a dashed average
+line; they also read `sleep_duration_sec`.
 
-### Sleep Components
+If sleep sessions exist but there is no score data, the score chart says that a scoring source (Oura,
+Garmin) is needed and links to Data sources.
 
-Five Oura sleep sub-scores (when available): Total Score, Deep Sleep, REM Sleep, Restfulness, and Timing. Each shows the period average with a trend percentage.
+### Sleep score contributors
+
+Oura's seven sleep contributor scores (total sleep, efficiency, restfulness, REM, deep, latency,
+timing) for the latest night as 0-100 bars, with a tick for the range average. These are scores, not
+measurements — the _Efficiency score_ is not the efficiency percentage. Scores under 70 are marked
+"Pay attention".
+
+### Schedule
+
+From `GET /health/sleep-schedule`: one bar per night from bedtime to wake time on a clock axis
+(evening at the top), the average bedtime and wake time as hairlines, and Oura's optimal bedtime
+window as a shaded band when Oura has found one. The header reads e.g. "Bedtime 22:10 ± 34 min ·
+Wake 06:40 ± 22 min". Oura's bedtime recommendation is shown as a sentence ("Oura suggests going to
+bed earlier", "Oura found an optimal bedtime window: 22:00–22:45", "Oura needs more nights to
+recommend a bedtime"); a window found on an earlier day says when.
+
+### Breathing and nighttime heart rate
+
+Small trend charts for average SpO₂, respiratory rate and the breathing disturbance index (lower is
+better), and one chart with resting HR (the lowest overnight value) and the average overnight HR.
 
 ## Sleep Detail View
 
@@ -86,5 +113,5 @@ The Sleep page works with any sleep source, but Oura provides the richest data (
 
 - Sleep components (deep, REM, restfulness, timing) are **Oura-specific**. They don't appear for Garmin-only or Health Connect-only users.
 - The Sleep page does not track **sleep debt** or **sleep need** -- it shows quality metrics but not how much sleep you need vs. how much you're getting. (See issue #302 for planned sleep debt tracking.)
-- Sleep duration uses the calculated "asleep" time when available (excluding awake periods). When stage data is missing, it falls back to total time in bed.
-- There is no sleep **timing consistency** analysis (e.g., tracking bedtime regularity over time), though the Oura "Timing" sub-score partially covers this.
+- The Sleep page reads per-night health metrics that Oura fills in full; with other sources (Garmin, Health Connect) only some cards and charts have data, while their sleep sessions still show in the Timeline and the sleep detail view.
+- Bedtime regularity is shown as the schedule chart's bedtime/wake spread; there is no longer-term regularity score beyond Oura's "Timing" contributor.

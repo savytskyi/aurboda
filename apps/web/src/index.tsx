@@ -23,6 +23,7 @@ const Challenges = lazyPage(() => import('./pages/Challenges/index.jsx'), 'Chall
 const ChallengeJoin = lazyPage(() => import('./pages/Challenges/Join.jsx'), 'ChallengeJoin')
 const Chart = lazyPage(() => import('./pages/Chart/index.jsx'), 'Chart')
 const Correlations = lazyPage(() => import('./pages/Correlations/index.jsx'), 'Correlations')
+const Dashboard = lazyPage(() => import('./pages/Dashboard/index.jsx'), 'Dashboard')
 const Data = lazyPage(() => import('./pages/Data/index.jsx'), 'Data')
 const ActivityWatchAndroidSource = lazyPage(
   () => import('./pages/DataSources/ActivityWatchAndroidSource.jsx'),
@@ -59,6 +60,11 @@ const Feed = lazyPage(() => import('./pages/Feed/index.jsx'), 'Feed')
 const FoodItemDetail = lazyPage(() => import('./pages/FoodItems/FoodItemDetail.jsx'), 'FoodItemDetail')
 const FoodItems = lazyPage(() => import('./pages/FoodItems/index.jsx'), 'FoodItems')
 const Goals = lazyPage(() => import('./pages/Goals/index.jsx'), 'Goals')
+const HealthActivity = lazyPage(() => import('./pages/Health/Activity.jsx'), 'HealthActivity')
+const HealthHeart = lazyPage(() => import('./pages/Health/Heart.jsx'), 'HealthHeart')
+const HealthLifestyle = lazyPage(() => import('./pages/Health/Lifestyle.jsx'), 'HealthLifestyle')
+const HealthRecovery = lazyPage(() => import('./pages/Health/Recovery.jsx'), 'Recovery')
+const HealthStress = lazyPage(() => import('./pages/Health/Stress.jsx'), 'HealthStress')
 const Home = lazyPage(() => import('./pages/Home/index.jsx'), 'Home')
 const Login = lazyPage(() => import('./pages/Login/index.jsx'), 'Login')
 const Meals = lazyPage(() => import('./pages/Meals/index.jsx'), 'Meals')
@@ -112,6 +118,12 @@ function AppShell() {
             <Route path="/challenges/join" component={ChallengeJoin} />
             <Route path="/challenges" component={Challenges} />
             <Route path="/" component={Home} />
+            <Route path="/dashboard" component={Dashboard} />
+            <Route path="/health/recovery" component={HealthRecovery} />
+            <Route path="/health/activity" component={HealthActivity} />
+            <Route path="/health/stress" component={HealthStress} />
+            <Route path="/health/heart" component={HealthHeart} />
+            <Route path="/health/lifestyle" component={HealthLifestyle} />
             <Route path="/login" component={Login} />
             <Route path="/signup" component={Signup} />
             <Route path="/privacy" component={Privacy} />

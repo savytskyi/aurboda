@@ -5,6 +5,8 @@
 
 export const NAV_LINKS_PRIMARY = [
   { href: '/', label: 'Home', icon: '🏠' },
+  { href: '/health/recovery', label: 'Health', icon: '❤️' },
+  { href: '/dashboard', label: 'Dashboard', icon: '🧩' },
   { href: '/goals', label: 'Goals', icon: '🎯' },
   { href: '/timeline', label: 'Timeline', icon: '📅' },
   { href: '/workouts', label: 'Workouts', icon: '🏋' },

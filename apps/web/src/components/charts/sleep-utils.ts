@@ -89,7 +89,7 @@ export type SleepMetricKey = (typeof SLEEP_METRICS)[number]
 
 export const SLEEP_METRIC_LABELS: Record<SleepMetricKey, string> = {
   sleep_deep_score: 'Deep',
-  sleep_efficiency: 'Efficiency',
+  sleep_efficiency: 'Efficiency score',
   sleep_rem_score: 'REM',
   sleep_restfulness: 'Restfulness',
   sleep_score: 'Score',
@@ -97,7 +97,7 @@ export const SLEEP_METRIC_LABELS: Record<SleepMetricKey, string> = {
 
 export const SLEEP_METRIC_UNITS: Record<SleepMetricKey, string> = {
   sleep_deep_score: '',
-  sleep_efficiency: '%',
+  sleep_efficiency: '',
   sleep_rem_score: '',
   sleep_restfulness: '',
   sleep_score: '',

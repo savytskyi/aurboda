@@ -2,7 +2,7 @@ import { dataSources } from '@aurboda/api-spec'
 import { useEffect } from 'preact/hooks'
 
 import { auth, ensureStatusLoaded, signupAllowed } from '../../state/auth'
-import { Dashboard } from '../Dashboard'
+import { HealthOverview } from '../Health/Overview'
 import './style.css'
 
 /** Every screenshot has a `.webp` sibling in `public/screenshots/`; the original is the fallback. */
@@ -323,9 +323,8 @@ export function Home() {
     ensureStatusLoaded()
   }, [])
 
-  // When logged in, show Dashboard without the .home wrapper (which has max-width: 800px)
   if (isLoggedIn) {
-    return <Dashboard />
+    return <HealthOverview />
   }
 
   return (

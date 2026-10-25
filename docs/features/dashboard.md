@@ -1,6 +1,6 @@
 # Dashboard
 
-The Dashboard is the home page for logged-in users. It presents your key health metrics, trends, and navigation links as a customizable grid of widgets organized into sections. Every user starts with a sensible default layout, but can rearrange, add, or remove widgets to surface what matters most to them.
+The customizable Dashboard lives at `/dashboard` (sidebar: **Dashboard**). The home page for logged-in users is the health overview instead — see [Health dashboard](health-dashboard.md); it links here with "Customize your dashboard →". The Dashboard presents your key health metrics, trends, and navigation links as a customizable grid of widgets organized into sections. Every user starts with a sensible default layout, but can rearrange, add, or remove widgets to surface what matters most to them.
 
 ## Default Layout
 
